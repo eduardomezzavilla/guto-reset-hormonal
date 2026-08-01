@@ -1,0 +1,351 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+TEMPLATE — Dashboard de Captura de Leads (Meta Ads × Lista de Leads).
+
+Lê duas abas de uma planilha Google (export CSV público) e emite os REGISTROS
+BRUTOS (leads[] / meta[]) dentro do HTML. Todo o cálculo/filtro/gráfico roda no
+navegador (ver build/template.html). Somente leitura; nunca escreve nas planilhas.
+
+>>> Antes de usar, preencha TODOS os <<PREENCHER>> (veja o CHECKLIST no CLAUDE.md).
+
+Teste local: python build/build.py --leads-file leads.csv --meta-file meta.csv --out dist/index.html
+"""
+from __future__ import annotations
+
+import argparse
+import csv
+import io
+import json
+import os
+import re
+import sys
+import unicodedata
+import urllib.request
+from datetime import datetime, timezone, timedelta
+
+# ==========================================================================
+# CONFIGURAÇÃO DO CLIENTE  (preencher para cada novo relatório)
+# ==========================================================================
+SPREADSHEET_ID = "<<PREENCHER: ID da planilha Google — está na URL entre /d/ e /edit>>"
+GID_LEADS = "<<PREENCHER: gid da aba de Leads — número após gid= na URL da aba>>"
+GID_META  = "<<PREENCHER: gid da aba de Meta Ads>>"
+
+TAX_FACTOR = 1.0   # <<PREENCHER: fator do imposto Meta (ex.: 1.13806 = +13,806%). Use 1.0 se não houver imposto>>
+MQL_MIN_MIL = 30   # <<PREENCHER: faturamento mínimo (em milhares) para contar como MQL. Ver is_qualified()>>
+
+# Rótulos exibidos na interface (o template.html lê estes valores do JSON):
+CLIENT_NAME = "<<PREENCHER: nome/marca do cliente, ex.: Acme>>"
+CLIENT_SUB  = "<<PREENCHER: subtítulo, ex.: Captura de Leads>>"
+MQL_LABEL   = "<<PREENCHER: rótulo do lead qualificado, ex.: MQLs (>=30k)>>"
+TAX_LABEL   = "<<PREENCHER: rótulo do toggle de imposto, ex.: Imposto Meta x1,13806>>"
+QUAL_DESC   = "<<PREENCHER: descrição curta do critério, ex.: >= 30 mil>>"
+# Ordem das faixas no gráfico "Leads por faixa" (deixe [] para ordenar por contagem):
+BUCKET_ORDER: list[str] = []   # <<PREENCHER (opcional): ex.: ["Menos de 5 mil","Entre 5 a 10 mil", ...]>>
+# ==========================================================================
+
+EXPORT_URL = "https://docs.google.com/spreadsheets/d/{sid}/export?format=csv&gid={gid}"
+BRT = timezone(timedelta(hours=-3))   # horário de Brasília (exibição)
+
+
+# --------------------------------------------------------------------------- #
+# Leitura (só leitura das planilhas)
+# --------------------------------------------------------------------------- #
+def fetch_csv(url: str) -> list[list[str]]:
+    req = urllib.request.Request(url, headers={"User-Agent": "dash-template-bot/1.0"})
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        raw = resp.read().decode("utf-8", errors="replace")
+    return list(csv.reader(io.StringIO(raw)))
+
+
+def read_csv_file(path: str) -> list[list[str]]:
+    with open(path, "r", encoding="utf-8", errors="replace", newline="") as f:
+        return list(csv.reader(f))
+
+
+def load_rows(url: str, local: str | None) -> list[list[str]]:
+    return read_csv_file(local) if local else fetch_csv(url)
+
+
+# --------------------------------------------------------------------------- #
+# Helpers
+# --------------------------------------------------------------------------- #
+def strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFKD", s) if not unicodedata.combining(c))
+
+
+def norm(s: str | None) -> str:
+    return strip_accents((s or "").strip().lower())
+
+
+def to_float(v) -> float:
+    if v is None:
+        return 0.0
+    if isinstance(v, (int, float)):
+        return float(v)
+    s = re.sub(r"[^\d,.\-]", "", str(v).strip())
+    if not s:
+        return 0.0
+    if "," in s and "." in s:
+        s = s.replace(".", "").replace(",", ".")
+    elif "," in s:
+        s = s.replace(",", ".")
+    try:
+        return float(s)
+    except ValueError:
+        return 0.0
+
+
+def parse_date(v: str) -> str | None:
+    if not v:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    m = re.match(r"(\d{4})-(\d{2})-(\d{2})", s)
+    if m:
+        return f"{m.group(1)}-{m.group(2)}-{m.group(3)}"
+    for fmt in ("%d/%m/%Y", "%m/%d/%Y", "%d/%m/%y", "%b %d, %Y", "%Y/%m/%d"):
+        try:
+            return datetime.strptime(s, fmt).strftime("%Y-%m-%d")
+        except ValueError:
+            continue
+    return None
+
+
+def is_test_lead(rowtext: str) -> bool:
+    return "<test lead" in rowtext.lower()
+
+
+_NUM_RE = re.compile(r"\d+")
+
+
+def is_qualified(bucket: str | None) -> bool:
+    """
+    <<PREENCHER: REGRA DE LEAD QUALIFICADO (MQL) DESTE CLIENTE>>
+
+    Implementação de exemplo: coluna de faturamento com faixas em texto
+    ('menos_de_5_mil', 'entre_30_e_50_mil', 'mais_de_100_mil', ...). Qualifica
+    quando o limite inferior da faixa é >= MQL_MIN_MIL.
+
+    Para outro critério (leadscore 'A'/'A+', coluna 'QLF', resposta específica
+    de formulário, etc.), REESCREVA esta função conforme a planilha do cliente.
+    """
+    s = norm(bucket)
+    if not s or "test lead" in s:
+        return False
+    nums = [int(n) for n in _NUM_RE.findall(s)]
+    if not nums:
+        return False
+    if "menos" in s or "ate " in s or "abaixo" in s:
+        return False
+    if "entre" in s:
+        return min(nums) >= MQL_MIN_MIL
+    if any(k in s for k in ("mais", "acima", "superior", "maior")):
+        return max(nums) >= MQL_MIN_MIL
+    return max(nums) >= MQL_MIN_MIL
+
+
+def pretty_bucket(bucket: str) -> str:
+    s = (bucket or "").strip()
+    return s.replace("_", " ").replace(" e ", " a ").capitalize() if s else "Sem resposta"
+
+
+# ----- Máscara de PII (a página publicada é pública) ----- #
+def mask_email(e: str) -> str:
+    e = (e or "").strip()
+    if "@" not in e:
+        return "—"
+    user, dom = e.split("@", 1)
+    keep = user[:2] if len(user) > 2 else user[:1]
+    return f"{keep}****@{dom}"
+
+
+def mask_phone(p: str) -> str:
+    digits = re.sub(r"\D", "", p or "")
+    return f"…{digits[-4:]}" if len(digits) >= 4 else "—"
+
+
+def first_last_initial(name: str) -> str:
+    parts = (name or "").strip().split()
+    if not parts:
+        return "—"
+    return parts[0] if len(parts) == 1 else f"{parts[0]} {parts[-1][:1]}."
+
+
+def valid_utm(campaign: str) -> bool:
+    c = (campaign or "").strip()
+    return bool(c) and c not in ("-", "—")
+
+
+# --------------------------------------------------------------------------- #
+# Indexação de colunas (por nome, com fallback posicional)
+# --------------------------------------------------------------------------- #
+def header_index(header, wanted, fallback):
+    idx = {}
+    hn = [norm(h) for h in header]
+    for key, aliases in wanted.items():
+        found = None
+        for a in aliases:
+            a = norm(a)
+            for i, h in enumerate(hn):
+                if h == a or (a and a in h):
+                    found = i
+                    break
+            if found is not None:
+                break
+        idx[key] = found if found is not None else fallback.get(key)
+    return idx
+
+
+def cell(row, i):
+    if i is None or i < 0 or i >= len(row):
+        return ""
+    return (row[i] or "").strip()
+
+
+# --------------------------------------------------------------------------- #
+# Processamento -> registros brutos
+# --------------------------------------------------------------------------- #
+def process(leads_rows, meta_rows):
+    # >>> Aba de LEADS. Confira os nomes/posições das colunas com a planilha do cliente.
+    #     Colunas 'profession' e 'faturamento' costumam ser perguntas do formulário
+    #     (nomes variam por cliente) — ajuste os aliases/posições abaixo.
+    lheader = leads_rows[0] if leads_rows else []
+    lidx = header_index(
+        lheader,
+        {"created": ["created_time", "data", "created"], "ad_name": ["ad_name"],
+         "adset_name": ["adset_name"], "campaign": ["campaign_name"], "is_organic": ["is_organic"],
+         "platform": ["platform"],
+         "profession": ["<<PREENCHER: coluna de profissão/segmentação, ex.: qual_sua_profissao>>", "profiss"],
+         "faturamento": ["<<PREENCHER: coluna usada no critério de MQL, ex.: qual_seu_faturamento>>", "faturamento"],
+         "name": ["full_name", "nome"], "email": ["email"], "phone": ["phone_number", "phone", "telefone"]},
+        # fallback posicional (0-based) — ajuste conforme o layout do cliente:
+        {"created": 1, "ad_name": 3, "adset_name": 5, "campaign": 7, "is_organic": 10, "platform": 11,
+         "profession": 12, "faturamento": 13, "name": 14, "email": 15, "phone": 16},
+    )
+
+    leads = []
+    for row in leads_rows[1:]:
+        if not any((c or "").strip() for c in row):
+            continue
+        if is_test_lead(" ".join(str(c) for c in row)):
+            continue
+        organic = norm(cell(row, lidx["is_organic"])) in ("true", "1", "sim", "verdadeiro")
+        platform = norm(cell(row, lidx["platform"]))
+        campaign = cell(row, lidx["campaign"])
+        if organic:
+            src = "org"
+        elif norm(campaign).startswith("goog") or platform in ("google", "youtube"):
+            src = "google"
+        elif platform in ("ig", "fb", "instagram", "facebook") or campaign:
+            src = "meta"
+        else:
+            src = "outros"
+        fat = cell(row, lidx["faturamento"])
+        leads.append({
+            "d": parse_date(cell(row, lidx["created"])),
+            "src": src,
+            "plat": platform or "—",
+            "camp": campaign or "(sem campanha)",
+            "adset": cell(row, lidx["adset_name"]) or "(sem conjunto)",
+            "ad": cell(row, lidx["ad_name"]) or "(sem anúncio)",
+            "prof": (cell(row, lidx["profession"]) or "Sem resposta").replace("_", " ").capitalize(),
+            "bucket": pretty_bucket(fat),
+            "q": 1 if is_qualified(fat) else 0,
+            "utm": 1 if valid_utm(campaign) else 0,
+            "nm": first_last_initial(cell(row, lidx["name"])),
+            "em": mask_email(cell(row, lidx["email"])),
+            "ph": mask_phone(cell(row, lidx["phone"])),
+        })
+
+    # >>> Aba de META ADS. Colunas padrão do gerenciador (ajuste se necessário).
+    mheader = meta_rows[0] if meta_rows else []
+    midx = header_index(
+        mheader,
+        {"day": ["day", "data"], "campaign": ["campaign name", "campaign"], "adset": ["ad set name", "adset"],
+         "ad": ["ad name"], "spent": ["amount spent", "valor gasto", "gasto"], "impr": ["impressions", "impress"],
+         "clicks": ["link clicks", "clicks", "cliques"], "leads": ["leads"]},
+        {"day": 0, "campaign": 1, "adset": 2, "ad": 3, "spent": 4, "impr": 5, "clicks": 6, "leads": 7},
+    )
+
+    meta = []
+    for row in meta_rows[1:]:
+        if not any((c or "").strip() for c in row):
+            continue
+        meta.append({
+            "d": parse_date(cell(row, midx["day"])),
+            "camp": cell(row, midx["campaign"]) or "(sem campanha)",
+            "adset": cell(row, midx["adset"]) or "(sem conjunto)",
+            "ad": cell(row, midx["ad"]) or "(sem anúncio)",
+            "sp": round(to_float(cell(row, midx["spent"])), 4),
+            "im": to_float(cell(row, midx["impr"])),
+            "cl": to_float(cell(row, midx["clicks"])),
+            "ml": to_float(cell(row, midx["leads"])),
+        })
+
+    dates = sorted({d for d in ([l["d"] for l in leads if l["d"]] + [m["d"] for m in meta if m["d"]])})
+    now_brt = datetime.now(BRT)
+    return {
+        "build": {
+            "generated_at_brt": now_brt.strftime("%d/%m/%Y %H:%M"),
+            "build_id": datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S"),
+            "today": now_brt.strftime("%Y-%m-%d"),
+            "date_min": dates[0] if dates else None,
+            "date_max": dates[-1] if dates else None,
+            "tax_factor": TAX_FACTOR,
+            # rótulos lidos pelo template.html:
+            "client_name": CLIENT_NAME,
+            "client_sub": CLIENT_SUB,
+            "mql_label": MQL_LABEL,
+            "tax_label": TAX_LABEL,
+            "qual_desc": QUAL_DESC,
+            "bucket_order": BUCKET_ORDER,
+        },
+        "leads": leads,
+        "meta": meta,
+    }
+
+
+# --------------------------------------------------------------------------- #
+# Render
+# --------------------------------------------------------------------------- #
+def render(data, template_path):
+    with open(template_path, "r", encoding="utf-8") as f:
+        tpl = f.read()
+    tpl = tpl.replace("__DATA_JSON__", json.dumps(data, ensure_ascii=False))
+    tpl = tpl.replace("__BUILD_ID__", data["build"]["build_id"])
+    tpl = tpl.replace("__GENERATED_BRT__", data["build"]["generated_at_brt"])
+    return tpl
+
+
+def main():
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--leads-file")
+    ap.add_argument("--meta-file")
+    ap.add_argument("--template", default="build/template.html")
+    ap.add_argument("--out", default="dist/index.html")
+    args = ap.parse_args()
+
+    if not args.leads_file and "<<PREENCHER" in SPREADSHEET_ID:
+        sys.exit("ERRO: preencha SPREADSHEET_ID/GID_* (ou use --leads-file/--meta-file para teste). Veja o CHECKLIST no CLAUDE.md.")
+
+    leads_rows = load_rows(EXPORT_URL.format(sid=SPREADSHEET_ID, gid=GID_LEADS), args.leads_file)
+    meta_rows = load_rows(EXPORT_URL.format(sid=SPREADSHEET_ID, gid=GID_META), args.meta_file)
+    data = process(leads_rows, meta_rows)
+
+    os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
+    with open(args.out, "w", encoding="utf-8") as f:
+        f.write(render(data, args.template))
+
+    b = data["build"]
+    q = sum(l["q"] for l in data["leads"])
+    print("== build ok ==", file=sys.stderr)
+    print(f"  periodo : {b['date_min']} -> {b['date_max']}", file=sys.stderr)
+    print(f"  leads   : {len(data['leads'])}  MQLs: {q}", file=sys.stderr)
+    print(f"  meta    : {len(data['meta'])} linhas", file=sys.stderr)
+    print(f"  out     : {args.out}", file=sys.stderr)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,67 @@
+# Ativação + configuração do cron-job.org (TEMPLATE)
+
+> Substitua `<<PREENCHER: owner>>` e `<<PREENCHER: repo>>` pelo dono/repositório do
+> cliente, e use um **token novo do cliente** (nunca reutilize tokens entre clientes,
+> nunca comite token no repositório).
+
+## Passo 1 — Colocar na branch `main` (uma vez)
+
+`workflow_dispatch` (o que o cron-job.org chama) **só existe na branch padrão**.
+Faça o merge para a `main`. Na 1ª execução o workflow habilita o GitHub Pages
+automaticamente (`actions/configure-pages` com `enablement: true`).
+
+URL pública após publicar: `<<PREENCHER: https://<owner>.github.io/<repo>/>>`
+
+Disparar a 1ª execução na mão: aba **Actions** → *Build & Deploy Dashboard* → **Run workflow**.
+
+## Passo 2 — Token (fine-grained, recomendado)
+
+GitHub → *Settings* → *Developer settings* → **Fine-grained tokens** → *Generate*:
+- Repository access: **Only select repositories → `<<PREENCHER: repo>>`**
+- Permissions → **Actions: Read and write**
+
+Guarde o token; ele vai só no cron-job.org.
+
+## Passo 3 — Criar o cron job em https://cron-job.org
+
+### URL
+```
+https://api.github.com/repos/<<PREENCHER: owner>>/<<PREENCHER: repo>>/actions/workflows/deploy.yml/dispatches
+```
+### Método
+```
+POST
+```
+### Schedule
+```
+A cada 30 minutos  (Every 30 minutes)
+```
+### Headers (um por linha)
+```
+Accept: application/vnd.github+json
+```
+```
+Authorization: Bearer <<PREENCHER: TOKEN do cliente>>
+```
+```
+X-GitHub-Api-Version: 2022-11-28
+```
+```
+Content-Type: application/json
+```
+### Request body
+```
+{"ref":"main"}
+```
+
+## Como saber se funcionou
+- Resposta esperada da API: **HTTP 204 No Content**.
+- Em **Actions** aparece uma nova execução a cada disparo.
+- 401/403 = token errado/sem permissão **Actions: write**.
+- 404 = confira owner/repo/nome do arquivo (`deploy.yml`) e se está na `main`.
+- 422 = o workflow ainda não está na `main`.
+
+## Observações
+- A página lê as planilhas **somente leitura**; nunca escreve nelas.
+- O `schedule` nativo (`*/30 * * * *`) fica como backup; o cron-job.org é a fonte
+  principal de pontualidade.
