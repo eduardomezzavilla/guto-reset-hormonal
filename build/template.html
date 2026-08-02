@@ -727,8 +727,10 @@ function iaStatusText(){
   document.getElementById('iaGen').disabled = !b;
 }
 function iaShow(html){ document.getElementById('iaCards').innerHTML=html; }
-function iaRenderCards(insights,usage){
+function iaFmtDate(ts){ try{ return new Date(ts).toLocaleString('pt-BR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }catch(_){ return ''; } }
+function iaRenderCards(insights,usage,at){
   if(!insights.length){ iaShow('<div class="ia-empty">A IA não retornou insights.</div>'); return; }
+  const stamp = at ? `<div class="ia-empty" style="grid-column:1/-1;text-align:left">Gerado em ${iaFmtDate(at)}${STATE?` · filtro ${esc(STATE.from||'')} a ${esc(STATE.to||'')}`:''}</div>` : '';
   const sev=s=>['alta','media','baixa'].includes(String(s))?s:'baixa';
   const cards=insights.map(i=>{
     const s=sev(i.severidade); let verba='';
@@ -746,7 +748,7 @@ function iaRenderCards(insights,usage){
     </div>`;
   }).join('');
   const u = usage ? `<div class="ia-empty" style="grid-column:1/-1">Tokens: entrada ${usage.input_tokens||'?'} · saída ${usage.output_tokens||'?'}</div>` : '';
-  iaShow(cards+u);
+  iaShow(stamp+cards+u);
 }
 function iaNormUrl(u){ u=(u||'').trim(); if(u && !/^https?:\/\//i.test(u)) u='https://'+u; return u; }
 async function iaGenerate(){
@@ -762,11 +764,23 @@ async function iaGenerate(){
       const extra=[]; if(j.detail) extra.push(String(j.detail)); if(j.stop_reason) extra.push('stop_reason='+j.stop_reason); if(j.raw) extra.push('Resposta do modelo: '+String(j.raw));
       iaShow('<div class="ins-card err"><div class="ins-title">Erro</div><div class="ins-diag">'+esc(j.error||('HTTP '+res.status))+'</div>'+(extra.length?('<div class="ins-struct" style="white-space:pre-wrap">'+esc(extra.join('\n').slice(0,1200))+'</div>'):'')+'</div>');
     }
-    else iaRenderCards(j.insights||[], j.usage);
+    else {
+      const at=Date.now();
+      try{ localStorage.setItem('ia_last', JSON.stringify({insights:j.insights||[], usage:j.usage||null, at, from:STATE.from, to:STATE.to})); }catch(_){}
+      iaRenderCards(j.insights||[], j.usage, at);
+    }
   }catch(e){ iaShow('<div class="ins-card err"><div class="ins-title">Falha de rede</div><div class="ins-diag">'+esc(e.message)+' — a URL deve começar com https:// e terminar em .workers.dev, e o Worker precisa estar publicado (CORS).</div></div>'); }
   finally{ btn.classList.remove('loading'); btn.disabled=false; }
 }
-function renderIA(){ iaStatusText(); }
+function iaRestore(){
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem('ia_last')||'null'); }catch(_){}
+  if(saved && Array.isArray(saved.insights) && saved.insights.length){
+    iaRenderCards(saved.insights, saved.usage, saved.at);
+    return true;
+  }
+  return false;
+}
+function renderIA(){ iaStatusText(); iaRestore(); }
 
 /* ---------------- date presets ---------------- */
 const PRESETS=[
