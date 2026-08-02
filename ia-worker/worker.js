@@ -106,7 +106,6 @@ export default {
         body: JSON.stringify({
           model: MODEL,
           max_tokens: 8000,
-          temperature: 0,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMsg }],
         }),
