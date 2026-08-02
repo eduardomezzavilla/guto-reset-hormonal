@@ -83,7 +83,9 @@
   .grid{display:grid; gap:16px}
   .two-col{grid-template-columns:380px 1fr}
   .three-col{grid-template-columns:360px 1fr}
-  @media(max-width:1000px){.two-col,.three-col{grid-template-columns:1fr}}
+  .funnel-grid{grid-template-columns:360px 1fr; align-items:start}
+  .funnel-charts{display:flex; flex-direction:column; gap:16px}
+  @media(max-width:1000px){.two-col,.three-col,.funnel-grid{grid-template-columns:1fr}}
   .card{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px}
   .card h3{margin:0 0 2px; font-size:14px}
   .card .hint{font-size:12px; color:var(--muted); margin:0 0 10px}
@@ -185,10 +187,17 @@
     <div class="page-content">
       <!-- ===================== PÁGINA 1: VISÃO GERAL ===================== -->
       <div class="page active" id="page-geral">
-        <h2 class="sec-title">KPIs principais</h2>
-        <div class="kpis n1" id="geralKpis1"></div>
-        <h2 class="sec-title">KPIs secundários</h2>
-        <div class="kpis n2" id="geralKpis2"></div>
+        <h2 class="sec-title">Funil de tráfego pago (VSL)</h2>
+        <div class="grid funnel-grid">
+          <div class="card"><div class="funnel" id="geralFunnel"></div>
+            <p class="note">Vendas e Faturamento = <b>totais</b> (todas as vendas). Vendas/CAC/Ticket = produto principal (<span id="mainProdNoteG"></span>); conversões (CR, VisCHK, ConvCHK) = <b>só Meta Ads</b>.</p>
+          </div>
+          <div class="funnel-charts">
+            <div class="card"><h3>CPM e CTR por dia</h3><p class="hint">CPM (R$, esq.) · CTR (%, dir.)</p><div class="chart-box chart-sm"><canvas id="gCpmCtr"></canvas></div></div>
+            <div class="card"><h3>Connect Rate e VisCHK por dia</h3><p class="hint">CR = Page Views/Cliques · VisCHK = Checkouts/Page Views</p><div class="chart-box chart-sm"><canvas id="gCrVis"></canvas></div></div>
+            <div class="card"><h3>ConvLP e ConvCHK por dia</h3><p class="hint">ConvLP = Vendas/Page Views · ConvCHK = Vendas/Checkouts (Meta)</p><div class="chart-box chart-sm"><canvas id="gConv"></canvas></div></div>
+          </div>
+        </div>
 
         <h2 class="sec-title">Evolução diária &amp; resultados por dia</h2>
         <div class="panel">
@@ -197,20 +206,22 @@
           <p class="note" style="padding:10px 15px 12px">Vendas e Faturamento = <b>totais</b> (todas as vendas). Conversões (CR, VisCHK, ConvCHK) consideram <b>apenas Meta Ads</b>. Heatmap por coluna · último dia no topo · clique numa data para filtrar (Ctrl = várias).</p>
         </div>
 
-        <h2 class="sec-title">Indicadores por dia</h2>
-        <div class="grid" style="grid-template-columns:1fr 1fr">
-          <div class="card"><h3>CPM e CTR por dia</h3><p class="hint">CPM (R$, esq.) · CTR (%, dir.)</p><div class="chart-box chart-sm"><canvas id="gCpmCtr"></canvas></div></div>
-          <div class="card"><h3>Connect Rate e VisCHK por dia</h3><p class="hint">CR = Page Views/Cliques · VisCHK = Checkouts/Page Views</p><div class="chart-box chart-sm"><canvas id="gCrVis"></canvas></div></div>
-          <div class="card"><h3>ConvLP e ConvCHK por dia</h3><p class="hint">ConvLP = Vendas/Page Views · ConvCHK = Vendas/Checkouts (Meta Ads)</p><div class="chart-box chart-sm"><canvas id="gConv"></canvas></div></div>
-          <div class="card" style="padding:0"><div style="padding:14px 15px 4px"><h3>Vendas por produto</h3><p class="hint" style="margin:0">Protocolo Reset = 100% · demais como % desse total</p></div><div class="tbl-wrap" style="max-height:210px"><table class="dt" id="gProd"></table></div></div>
-        </div>
+        <h2 class="sec-title">Vendas por produto</h2>
+        <div class="card" style="padding:0"><div style="padding:14px 15px 4px"><p class="hint" style="margin:0">Protocolo Reset = 100% · demais como % desse total (todas as vendas)</p></div><div class="tbl-wrap" style="max-height:260px"><table class="dt" id="gProd"></table></div></div>
       </div>
 
       <!-- ===================== PÁGINA 2: META ADS ===================== -->
       <div class="page" id="page-meta">
         <h2 class="sec-title">Funil de tráfego pago (VSL · Meta)</h2>
-        <div class="card"><div class="funnel" id="metaFunnel"></div>
-          <p class="note">Considera <b>apenas vendas atribuídas ao Meta Ads</b> (UTM Content = Ad Name). <b>Vendas/CAC/ConvCHK/Ticket</b> = produto principal (<span id="mainProdNote"></span>); <b>Faturamento/ROAS</b> = todos os produtos do funil (orderbumps/upsells).</p>
+        <div class="grid funnel-grid">
+          <div class="card"><div class="funnel" id="metaFunnel"></div>
+            <p class="note">Considera <b>apenas vendas atribuídas ao Meta Ads</b> (UTM Content = Ad Name). <b>Vendas/CAC/ConvCHK/Ticket</b> = produto principal (<span id="mainProdNote"></span>); <b>Faturamento/ROAS</b> = todos os produtos do funil (orderbumps/upsells).</p>
+          </div>
+          <div class="funnel-charts">
+            <div class="card"><h3>CPM e CTR por dia</h3><p class="hint">CPM (R$, esq.) · CTR (%, dir.)</p><div class="chart-box chart-sm"><canvas id="mCpmCtr"></canvas></div></div>
+            <div class="card"><h3>Connect Rate e VisCHK por dia</h3><p class="hint">CR = Page Views/Cliques · VisCHK = Checkouts/Page Views</p><div class="chart-box chart-sm"><canvas id="mCrVis"></canvas></div></div>
+            <div class="card"><h3>ConvLP e ConvCHK por dia</h3><p class="hint">ConvLP = Vendas/Page Views · ConvCHK = Vendas/Checkouts</p><div class="chart-box chart-sm"><canvas id="mConv"></canvas></div></div>
+          </div>
         </div>
 
         <h2 class="sec-title">Combinação diária &amp; resultados por dia</h2>
@@ -538,49 +549,38 @@ function renderProdTable(id, salesSet){
   renderTable({id, cols:[{key:'prod',label:'Produto',type:'dim',big:true},{key:'vendas',label:'Vendas',type:'int',w:80},{key:'pctm',label:'% vs principal',type:'pct',w:120}], rows});
 }
 
+/* ---------------- funil + gráficos de conversão (comuns às 2 abas) ---------------- */
+function renderFunnel(id, steps){
+  document.getElementById(id).innerHTML=steps.map(s=>`
+    <div class="step"><div><div class="m-label">${s[0]}</div><div class="m-val">${s[1]}</div></div>
+    <div class="secs">${s[2].map(x=>`<div><span class="s-label">${x[0]}</span><span class="s-val">${x[1]}</span></div>`).join('')}</div></div>`).join('');
+}
+function funnelSteps(t){ const d=derive(t), g=d.gasto; return [
+  ['Gasto Total', brl(g), []],
+  ['Impressões', intf(t.im), [['CPM',brl(d.cpm)]]],
+  ['Cliques', intf(t.cl), [['CPC',brl(d.cpc)],['CTR',pct(d.ctr)]]],
+  ['Page Views', intf(t.pv), [['CPV',brl(d.cpv)],['CR',pct(d.cr)]]],
+  ['Checkouts', intf(t.ck), [['CPIC',brl(d.cpic)],['VisCHK',pct(d.vischk)]]],
+  ['Vendas', intf(t.vendas), [['CAC',brl(d.cac)],['ConvCHK',pct(d.convchk)]]],
+  ['Faturamento', brl(t.fat), [['ROAS',roasf(d.roas)],['Ticket Médio',brl(d.ticket)]]],
+]; }
+function convCharts(id1,id2,id3,dd){
+  multiLine(id1, dd, [{label:'CPM',fn:x=>x.im?+((x.sp*taxf())/x.im*1000).toFixed(2):null,color:'#E34948',fmt:'brl',axis:'L'},
+     {label:'CTR',fn:x=>x.im?+(x.cl/x.im).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'R'}], {L:{fmt:'brl'},R:{fmt:'pct'}});
+  multiLine(id2, dd, [{label:'CR',fn:x=>x.cl?+(x.pv/x.cl).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'L'},
+     {label:'VisCHK',fn:x=>x.pv?+(x.ck/x.pv).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}], {L:{fmt:'pct'}});
+  multiLine(id3, dd, [{label:'ConvLP',fn:x=>x.pv?+(x.vendasM/x.pv).toFixed(4):null,color:'#E8A400',fmt:'pct',axis:'L'},
+     {label:'ConvCHK',fn:x=>x.ck?+(x.vendasM/x.ck).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}], {L:{fmt:'pct'}});
+}
+
 /* ---------------- PAGE 1: Visão Geral ---------------- */
 function renderGeral(){
   const fM=metaActive(), fS=salesActive();          // fS = todas as vendas do funil
-  const t=totals(fS,fM), d=derive(t), g=d.gasto;
-  const k1=[
-    {label:'Gasto Total',val:brl(g),aux:'Meta Ads'},
-    {label:'Faturamento',val:brl(t.fat),aux:'todos os produtos'},
-    {label:'ROAS',val:roasf(d.roas),hero:true,pill:'fat / gasto',aux:'Faturamento / Gasto'},
-    {label:'Vendas',val:intf(t.vendas),aux:MAIN_PRODUCT},
-    {label:'CAC',val:brl(d.cac),aux:'Gasto / Vendas'},
-    {label:'Ticket Médio',val:brl(d.ticket),aux:'Faturamento / Vendas'},
-    {label:'Checkouts',val:intf(t.ck),aux:'CPIC '+brl(d.cpic)},
-    {label:'Page Views',val:intf(t.pv),aux:'CPV '+brl(d.cpv)},
-    {label:'Cliques',val:intf(t.cl),aux:'CPC '+brl(d.cpc)},
-    {label:'Impressões',val:intf(t.im),aux:'CPM '+brl(d.cpm)},
-  ];
-  const k2=[
-    {label:'CPM',val:brl(d.cpm),aux:'por mil impr.'},
-    {label:'CPC',val:brl(d.cpc),aux:'Gasto / Cliques'},
-    {label:'CTR',val:pct(d.ctr),aux:'Cliques / Impr.'},
-    {label:'CR',val:pct(d.cr),aux:'Page Views / Cliques'},
-    {label:'VisCHK',val:pct(d.vischk),aux:'Checkouts / Page Views'},
-    {label:'ConvCHK',val:pct(d.convchk),aux:'Vendas / Checkouts (Meta)'},
-    {label:'CPV',val:brl(d.cpv),aux:'Gasto / Page Views'},
-    {label:'CPIC',val:brl(d.cpic),aux:'Gasto / Checkouts'},
-  ];
-  document.getElementById('geralKpis1').innerHTML=k1.map(kpiCard).join('');
-  document.getElementById('geralKpis2').innerHTML=k2.map(kpiCard).join('');
-
+  const t=totals(fS,fM), d=derive(t);
+  renderFunnel('geralFunnel', funnelSteps(t));
   const dd=daily(fS,fM);
+  convCharts('gCpmCtr','gCrVis','gConv', dd);
   comboChart('gCombo', dd);
-  multiLine('gCpmCtr', dd,
-    [{label:'CPM',fn:x=>x.im?+((x.sp*taxf())/x.im*1000).toFixed(2):null,color:'#E34948',fmt:'brl',axis:'L'},
-     {label:'CTR',fn:x=>x.im?+(x.cl/x.im).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'R'}],
-    {L:{fmt:'brl'},R:{fmt:'pct'}});
-  multiLine('gCrVis', dd,
-    [{label:'CR',fn:x=>x.cl?+(x.pv/x.cl).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'L'},
-     {label:'VisCHK',fn:x=>x.pv?+(x.ck/x.pv).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}],
-    {L:{fmt:'pct'}});
-  multiLine('gConv', dd,
-    [{label:'ConvLP',fn:x=>x.pv?+(x.vendasM/x.pv).toFixed(4):null,color:'#E8A400',fmt:'pct',axis:'L'},
-     {label:'ConvCHK',fn:x=>x.ck?+(x.vendasM/x.ck).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}],
-    {L:{fmt:'pct'}});
   renderProdTable('gProd', fS);
 
   const dl=dd.slice().reverse();
@@ -607,21 +607,11 @@ function selDim(dim,key,ctrl){
 }
 function renderMeta(){
   const F=metaScope(null), fM=F.fM, fS=F.fS;
-  const t=totals(fS,fM), d=derive(t), g=d.gasto;
-  const steps=[
-    ['Gasto Total', brl(g), []],
-    ['Impressões', intf(t.im), [['CPM',brl(d.cpm)]]],
-    ['Cliques', intf(t.cl), [['CPC',brl(d.cpc)],['CTR',pct(d.ctr)]]],
-    ['Page Views', intf(t.pv), [['CPV',brl(d.cpv)],['CR',pct(d.cr)]]],
-    ['Checkouts', intf(t.ck), [['CPIC',brl(d.cpic)],['VisCHK',pct(d.vischk)]]],
-    ['Vendas', intf(t.vendas), [['CAC',brl(d.cac)],['ConvCHK',pct(d.convchk)]]],
-    ['Faturamento', brl(t.fat), [['ROAS',roasf(d.roas)],['Ticket Médio',brl(d.ticket)]]],
-  ];
-  document.getElementById('metaFunnel').innerHTML=steps.map(s=>`
-    <div class="step"><div><div class="m-label">${s[0]}</div><div class="m-val">${s[1]}</div></div>
-    <div class="secs">${s[2].map(x=>`<div><span class="s-label">${x[0]}</span><span class="s-val">${x[1]}</span></div>`).join('')}</div></div>`).join('');
+  const t=totals(fS,fM), d=derive(t);
+  renderFunnel('metaFunnel', funnelSteps(t));
 
   const dd=daily(fS,fM);
+  convCharts('mCpmCtr','mCrVis','mConv', dd);
   comboChart('mCombo', dd);
   const aggAd=buildAgg(fS,fM,'ad');
   hbar('mContent', Object.entries(aggAd).map(([label,a])=>({label,v:a.fat})), x=>x.v, '#1BAF7A', 10, brl);
@@ -705,6 +695,7 @@ document.getElementById('logoMain').textContent=B.client_name||'—';
 document.getElementById('logoSub').textContent=B.client_sub||'';
 document.getElementById('taxLabel').textContent=B.tax_label||'Imposto';
 document.getElementById('mainProdNote').textContent=MAIN_PRODUCT;
+document.getElementById('mainProdNoteG').textContent=MAIN_PRODUCT;
 document.getElementById('updated').innerHTML='Última atualização:<br>'+B.generated_at_brt+' (BRT)';
 document.getElementById('buildFoot').textContent='build __BUILD_ID__';
 document.getElementById('buildFoot2').textContent='· build __BUILD_ID__';
