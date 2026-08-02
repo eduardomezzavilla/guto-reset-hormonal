@@ -703,21 +703,65 @@ function iaMetricRow(x,d){
     convlp:r4(d.convlp),vendas:x.vendas,cac:r2(d.cac),convchk:r4(d.convchk),
     faturamento:r2(x.fat),roas:r2(d.roas),ticket:r2(d.ticket)};
 }
+function iaSumBuckets(arr){ const a=newBucket(); arr.forEach(x=>{a.sp+=x.sp;a.im+=x.im;a.cl+=x.cl;a.pv+=x.pv;a.ck+=x.ck;a.vendas+=x.vendas;a.vendasM+=x.vendasM;a.fat+=x.fat;}); return a; }
+function iaPctDelta(a,b){ return (a==null||b==null||!isFinite(a)||!isFinite(b)||b===0)?null:+(((a-b)/b)*100).toFixed(1); }
+function iaCmp(dR,dP,k){ return {recente:r2(dR[k]), anterior:r2(dP[k]), variacao_pct:iaPctDelta(dR[k],dP[k])}; }
 function iaBuildData(){
   const fM=metaActive(), fSall=salesActive(), fSmeta=fSall.filter(s=>s.meta);
   const t=totals(fSall,fM), tm=totals(fSmeta,fM);
-  const top=(map,n)=>Object.entries(map).sort((a,b)=>b[1].sp-a[1].sp).slice(0,n)
-    .map(([nome,a])=>Object.assign({nome}, iaMetricRow(a,derive(a))));
   const byProd={}; fSmeta.forEach(s=>{byProd[s.prod]=(byProd[s.prod]||0)+1;});
+
+  /* --- séries diárias e janelas de tendência (escopo Meta) --- */
+  const dd=daily(fSmeta,fM);                              // buckets diários (asc)
+  const serie=dd.slice(-90).map(x=>{const dv=derive(x); return {d:x.d, gasto:r2(dv.gasto), cpm:r2(dv.cpm),
+    ctr:r4(dv.ctr), cr:r4(dv.cr), vischk:r4(dv.vischk), convchk:r4(dv.convchk),
+    vendas:x.vendas, cac:r2(dv.cac), fat:r2(x.fat), roas:r2(dv.roas)};});
+  const days=dd.map(x=>x.d), n=days.length, half=Math.max(1,Math.min(7,Math.floor(n/2)));
+  let comparativo=null, recentSet=null, prevSet=null;
+  if(n>=2){
+    recentSet=new Set(days.slice(n-half));
+    prevSet=new Set(days.slice(Math.max(0,n-2*half), n-half));
+    const R=iaSumBuckets(dd.filter(x=>recentSet.has(x.d))), P=iaSumBuckets(dd.filter(x=>prevSet.has(x.d)));
+    const dR=derive(R), dP=derive(P);
+    comparativo={
+      dias_por_janela:half,
+      janela_recente:{de:days[n-half], ate:days[n-1]},
+      janela_anterior:prevSet.size?{de:days[Math.max(0,n-2*half)], ate:days[n-half-1]}:null,
+      cpm:iaCmp(dR,dP,'cpm'), ctr:iaCmp(dR,dP,'ctr'), cr:iaCmp(dR,dP,'cr'),
+      vischk:iaCmp(dR,dP,'vischk'), convchk:iaCmp(dR,dP,'convchk'),
+      cac:iaCmp(dR,dP,'cac'), roas:iaCmp(dR,dP,'roas'), gasto:iaCmp(dR,dP,'gasto'),
+      vendas:{recente:R.vendas, anterior:P.vendas, variacao_pct:iaPctDelta(R.vendas,P.vendas)},
+    };
+  }
+  /* top estruturas + tendência recente vs anterior */
+  function topTrend(dim,lim){
+    const map=buildAgg(fSmeta,fM,dim);
+    const aggR = recentSet ? buildAgg(fSmeta.filter(r=>recentSet.has(r.d)), fM.filter(r=>recentSet.has(r.d)), dim) : {};
+    const aggP = prevSet   ? buildAgg(fSmeta.filter(r=>prevSet.has(r.d)),   fM.filter(r=>prevSet.has(r.d)),   dim) : {};
+    return Object.entries(map).sort((a,b)=>b[1].sp-a[1].sp).slice(0,lim).map(([nome,a])=>{
+      const row=Object.assign({nome}, iaMetricRow(a,derive(a)));
+      if(comparativo){
+        const dvR=aggR[nome]?derive(aggR[nome]):null, dvP=aggP[nome]?derive(aggP[nome]):null;
+        row.tendencia={
+          cac_recente:dvR?r2(dvR.cac):null, cac_anterior:dvP?r2(dvP.cac):null,
+          roas_recente:dvR?r2(dvR.roas):null, roas_anterior:dvP?r2(dvP.roas):null,
+          gasto_recente:dvR?r2(dvR.gasto):null, gasto_anterior:dvP?r2(dvP.gasto):null };
+      }
+      return row;
+    });
+  }
+
   return {
-    periodo:{de:STATE.from,ate:STATE.to,dias_selecionados:[...STATE.selDays]},
+    periodo:{de:STATE.from,ate:STATE.to,dias_selecionados:[...STATE.selDays],dias_no_periodo:n},
     imposto_meta_aplicado: STATE.tax,
-    obs:"Taxas em fração 0-1. cr=PageViews/Cliques; vischk=Checkouts/PageViews; convlp=Vendas/PageViews; convchk=Vendas/Checkouts. total_todas_vendas inclui vendas orgânicas; conversões e estruturas consideram apenas Meta Ads. Produto principal = Protocolo Reset Hormonal.",
+    obs:"Taxas em fração 0-1. cr=PageViews/Cliques; vischk=Checkouts/PageViews; convlp=Vendas/PageViews; convchk=Vendas/Checkouts. total_todas_vendas inclui vendas orgânicas; conversões e estruturas consideram apenas Meta Ads. Produto principal = Protocolo Reset Hormonal. comparativo_periodo compara a janela recente vs a anterior (mesmo nº de dias) — use para detectar SATURAÇÃO/fadiga (ex.: CPM subindo + CTR/ROAS caindo). serie_diaria = evolução dia a dia. variacao_pct = variação % recente vs anterior. Cada estrutura traz 'tendencia' (recente vs anterior).",
     total_todas_vendas: iaMetricRow(t,derive(t)),
     total_meta_ads: iaMetricRow(tm,derive(tm)),
-    campanhas: top(buildAgg(fSmeta,fM,'camp'),10),
-    conjuntos: top(buildAgg(fSmeta,fM,'adset'),10),
-    anuncios: top(buildAgg(fSmeta,fM,'ad'),15),
+    comparativo_periodo: comparativo,
+    serie_diaria: serie,
+    campanhas: topTrend('camp',10),
+    conjuntos: topTrend('adset',10),
+    anuncios: topTrend('ad',15),
     vendas_por_produto: Object.entries(byProd).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([produto,vendas])=>({produto,vendas})),
   };
 }

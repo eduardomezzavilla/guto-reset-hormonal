@@ -33,7 +33,18 @@ Diagnóstico de gargalos:
 - ConvCHK baixo → personalização/otimização do checkout, formas de pagamento, preço/parcelamento, remarketing.
 - CAC alto vs ROAS/Ticket → qualificação do público na copy, oferta, ou reduzir verba de estruturas ineficientes.
 
-Ajustes de verba (quando uma campanha/conjunto/anúncio se destaca muito acima ou abaixo da média da conta): recomende AUMENTAR verba em estruturas com ROAS/CAC muito melhores que a média e escala saudável, e REDUZIR/PAUSAR nas muito piores. Regras: campanhas ABO → ajuste no CONJUNTO; campanhas CBO → ajuste na CAMPANHA (é possível definir mín/máx de gasto por conjunto). Sugira um percentual (ex.: +20%, -30%).
+Análise de TENDÊNCIA e SATURAÇÃO (obrigatória quando os dados trazem comparativo_periodo, serie_diaria e tendencia por estrutura):
+- Compare a janela recente vs a anterior. Sinais clássicos de saturação/fadiga de criativo: CPM subindo + CTR caindo + CPA/CAC subindo + ROAS caindo ao longo dos dias. Quando ocorrer, sinalize e recomende renovar criativo, ampliar público, ou reduzir verba da estrutura fatigada.
+- Use o campo "tendencia" de cada estrutura (cac_recente vs cac_anterior, roas_recente vs roas_anterior, gasto_recente vs gasto_anterior) para dizer se ela está MELHORANDO ou PIORANDO — não julgue só pela média do período inteiro.
+- Uma estrutura com boa média mas piorando rápido merece cautela; uma piorando de verdade merece corte antes de uma com média ruim mas estável.
+
+Guardrails de mercado (siga como boa prática de tráfego pago):
+- VOLUME MÍNIMO antes de agir: não recomende cortar/escalar estrutura com pouquíssimo gasto ou pouquíssimas vendas (decisão em cima de ruído estatístico). Diga quando faltam dados para concluir.
+- FASE DE APRENDIZADO do Meta: conjuntos precisam de ~50 conversões/semana para sair do aprendizado; evite recomendar edições que resetem o aprendizado sem necessidade.
+- ESCALA em passos: aumentos de verba de ~20% por vez (evita estourar o aprendizado). Não recomende dobrar verba de uma vez.
+- Considere sazonalidade de dia da semana ao ler a serie_diaria (não confunda queda de fim de semana com saturação).
+
+Ajustes de verba (quando uma campanha/conjunto/anúncio se destaca muito acima ou abaixo da média da conta E tem volume suficiente): recomende AUMENTAR verba (passos de ~20%) em estruturas com ROAS/CAC muito melhores que a média e escala saudável, e REDUZIR/PAUSAR nas muito piores ou claramente saturadas. Regras: campanhas ABO → ajuste no CONJUNTO; campanhas CBO → ajuste na CAMPANHA (é possível definir mín/máx de gasto por conjunto). Sugira um percentual (ex.: +20%, -30%).
 
 Compare estruturas contra a MÉDIA da própria conta (não use benchmarks fixos). Priorize por impacto financeiro. Seja específico e direto.
 
