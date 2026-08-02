@@ -48,6 +48,25 @@ const CORS = {
   "Access-Control-Max-Age": "86400",
 };
 
+// Extrai { insights: [...] } da resposta do modelo, tolerando cercas de
+// markdown (```json ... ```) ou texto em volta do JSON.
+function extractInsights(text) {
+  if (!text) return null;
+  let t = String(text).trim();
+  const fence = t.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  if (fence) t = fence[1].trim();
+  const candidates = [t];
+  const s = t.indexOf("{"), e = t.lastIndexOf("}");
+  if (s >= 0 && e > s) candidates.push(t.slice(s, e + 1));
+  for (const c of candidates) {
+    try {
+      const p = JSON.parse(c);
+      if (p && Array.isArray(p.insights)) return p;
+    } catch (_) {}
+  }
+  return null;
+}
+
 function json(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -86,7 +105,8 @@ export default {
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 4096,
+          max_tokens: 8000,
+          temperature: 0,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMsg }],
         }),
@@ -104,12 +124,13 @@ export default {
     if (data.stop_reason === "refusal") return json({ error: "A IA recusou a solicitação." }, 200);
 
     const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-    // extrai o objeto JSON mesmo se vier cercado por texto/markdown
-    const s = text.indexOf("{"), e = text.lastIndexOf("}");
-    let parsed = null;
-    if (s >= 0 && e > s) { try { parsed = JSON.parse(text.slice(s, e + 1)); } catch {} }
-    if (!parsed || !Array.isArray(parsed.insights)) {
-      return json({ error: "Não foi possível interpretar os insights.", raw: text.slice(0, 800) }, 200);
+    const parsed = extractInsights(text);
+    if (!parsed) {
+      return json({
+        error: "Não foi possível interpretar os insights.",
+        stop_reason: data.stop_reason || null,
+        raw: text.slice(0, 1500),
+      }, 200);
     }
     return json({ insights: parsed.insights, usage: data.usage || null });
   },
