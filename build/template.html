@@ -156,6 +156,29 @@
     .main-area{margin-left:0}
     label.ham{display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid var(--border); border-radius:9px; cursor:pointer; background:var(--surface)}
   }
+
+  /* ---------- IA Insights ---------- */
+  .ia-config{margin-top:12px; border-top:1px solid var(--border); padding-top:12px}
+  .ia-fields{display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end}
+  .ia-fields label{display:flex; flex-direction:column; font-size:11.5px; color:var(--muted); gap:4px}
+  .ia-fields input{border:1px solid var(--border); border-radius:8px; padding:7px 9px; font-size:12.5px; background:var(--surface); color:var(--ink); min-width:260px}
+  .ia-cards{display:grid; grid-template-columns:repeat(auto-fill,minmax(320px,1fr)); gap:14px; margin-top:16px}
+  .ins-card{background:var(--surface); border:1px solid var(--border); border-left:4px solid var(--muted); border-radius:12px; padding:14px 15px}
+  .ins-card.sev-alta{border-left-color:var(--bad)}
+  .ins-card.sev-media{border-left-color:var(--yellow)}
+  .ins-card.sev-baixa{border-left-color:var(--aqua)}
+  .ins-card.err{border-left-color:var(--bad)}
+  .ins-head{display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:6px}
+  .ins-badge{font-size:10.5px; text-transform:uppercase; letter-spacing:.04em; color:var(--accent-blue); background:var(--accent-blue-light); border:1px solid var(--border); border-radius:999px; padding:2px 8px}
+  .ins-sev{font-size:10.5px; text-transform:uppercase; font-weight:700; color:var(--muted)}
+  .sev-alta .ins-sev{color:var(--bad)} .sev-media .ins-sev{color:var(--yellow)} .sev-baixa .ins-sev{color:var(--aqua)}
+  .ins-title{font-weight:700; font-size:14px; margin-bottom:6px}
+  .ins-diag{font-size:12.5px; color:var(--ink); margin-bottom:8px; line-height:1.45}
+  .ins-rec{font-size:12.5px; color:var(--ink); background:var(--bg); border-radius:8px; padding:8px 10px; line-height:1.45}
+  .ins-struct{font-size:11.5px; color:var(--muted); margin-top:8px; word-break:break-word}
+  .ins-verba{font-size:12px; margin-top:10px; background:linear-gradient(180deg,var(--accent-blue-light),var(--surface)); border:1px solid var(--accent-blue); border-radius:8px; padding:8px 10px}
+  .ins-apply{display:block; font-size:10.5px; color:var(--muted); margin-top:3px}
+  .ia-empty{color:var(--muted); font-size:13px; padding:8px 2px}
 </style>
 </head>
 <body>
@@ -166,6 +189,7 @@
     <div class="sec">Dashboards</div>
     <div class="nav-item active" data-page="geral"><span class="ic">◱</span> Visão Geral</div>
     <div class="nav-item" data-page="meta"><span class="ic">◨</span> Meta Ads</div>
+    <div class="nav-item" data-page="ia"><span class="ic">✦</span> IA Insights</div>
     <div class="foot">Somente leitura · atualiza ~30 min<br><span id="buildFoot"></span></div>
   </aside>
 
@@ -258,6 +282,29 @@
           <div class="tbl-wrap" style="max-height:360px"><table class="dt" id="tQual"></table></div>
           <p class="note" style="padding:10px 15px">E‑mail <b>mascarado</b> (página pública). Só vendas atribuídas ao Meta Ads (produto principal + orderbumps/upsells).</p>
         </div>
+      </div>
+
+      <!-- ===================== PÁGINA 3: IA INSIGHTS ===================== -->
+      <div class="page" id="page-ia">
+        <h2 class="sec-title">IA Insights</h2>
+        <div class="card">
+          <div style="display:flex; align-items:center; gap:12px; flex-wrap:wrap">
+            <button class="btn primary" id="iaGen"><span class="spin">✦</span> Gerar insights</button>
+            <button class="btn" id="iaCfgBtn">⚙ Configurar</button>
+            <span class="hint" id="iaStatus" style="margin:0"></span>
+          </div>
+          <div class="ia-config" id="iaConfig" style="display:none">
+            <p class="hint" style="margin:6px 0">Cole a URL do seu Cloudflare Worker e a senha (ficam só neste navegador — nunca no código público). Passo a passo em <b>SETUP-IA.md</b>.</p>
+            <div class="ia-fields">
+              <label>Worker URL<input id="iaUrl" placeholder="https://reset-ia-insights.xxx.workers.dev"></label>
+              <label>Senha<input id="iaPass" type="password" placeholder="senha do Worker"></label>
+              <button class="btn primary" id="iaSave">Salvar</button>
+            </div>
+            <span class="hint" id="iaCfgMsg" style="display:block; margin-top:6px"></span>
+          </div>
+          <p class="note">Análise feita por IA (Claude) do <b>funil</b> e das <b>estruturas ativas</b> do período/filtro atual — CPM, CTR, CR, VisCHK, ConvLP, ConvCHK, CAC, ROAS, Ticket. Sinaliza gargalos e destaques; recomendações de verba consideram <b>ABO (conjunto)</b> e <b>CBO (campanha)</b>. Aplicação de verba: peça no chat que eu executo no Meta. Cada clique = 1 chamada à IA.</p>
+        </div>
+        <div id="iaCards" class="ia-cards"><div class="ia-empty">Configure o backend e clique em <b>Gerar insights</b>.</div></div>
       </div>
 
       <div class="foot">Atualizado automaticamente a cada ~30 min via GitHub Actions + cron‑job.org. Somente leitura das planilhas. <span id="buildFoot2"></span></div>
@@ -646,6 +693,76 @@ function renderMeta(){
     rows:rows.map((s,i)=>({k:'s'+i, cells:{d:s.d,nm:s.nm,prod:s.prod,val:s.val,camp:s.camp,ad:s.ad,em:s.em}}))});
 }
 
+/* ---------------- PAGE 3: IA Insights ---------------- */
+const r2=v=>(v==null||!isFinite(v))?null:Math.round(v*100)/100;
+const r4=v=>(v==null||!isFinite(v))?null:Math.round(v*10000)/10000;
+const esc=s=>String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+function iaMetricRow(x,d){
+  return {gasto:r2(d.gasto),impressoes:x.im,cpm:r2(d.cpm),cliques:x.cl,cpc:r2(d.cpc),ctr:r4(d.ctr),
+    page_views:x.pv,cpv:r2(d.cpv),cr:r4(d.cr),checkouts:x.ck,cpic:r2(d.cpic),vischk:r4(d.vischk),
+    convlp:r4(d.convlp),vendas:x.vendas,cac:r2(d.cac),convchk:r4(d.convchk),
+    faturamento:r2(x.fat),roas:r2(d.roas),ticket:r2(d.ticket)};
+}
+function iaBuildData(){
+  const fM=metaActive(), fSall=salesActive(), fSmeta=fSall.filter(s=>s.meta);
+  const t=totals(fSall,fM), tm=totals(fSmeta,fM);
+  const top=(map,n)=>Object.entries(map).sort((a,b)=>b[1].sp-a[1].sp).slice(0,n)
+    .map(([nome,a])=>Object.assign({nome}, iaMetricRow(a,derive(a))));
+  const byProd={}; fSmeta.forEach(s=>{byProd[s.prod]=(byProd[s.prod]||0)+1;});
+  return {
+    periodo:{de:STATE.from,ate:STATE.to,dias_selecionados:[...STATE.selDays]},
+    imposto_meta_aplicado: STATE.tax,
+    obs:"Taxas em fração 0-1. cr=PageViews/Cliques; vischk=Checkouts/PageViews; convlp=Vendas/PageViews; convchk=Vendas/Checkouts. total_todas_vendas inclui vendas orgânicas; conversões e estruturas consideram apenas Meta Ads. Produto principal = Protocolo Reset Hormonal.",
+    total_todas_vendas: iaMetricRow(t,derive(t)),
+    total_meta_ads: iaMetricRow(tm,derive(tm)),
+    campanhas: top(buildAgg(fSmeta,fM,'camp'),10),
+    conjuntos: top(buildAgg(fSmeta,fM,'adset'),10),
+    anuncios: top(buildAgg(fSmeta,fM,'ad'),15),
+    vendas_por_produto: Object.entries(byProd).sort((a,b)=>b[1]-a[1]).slice(0,10).map(([produto,vendas])=>({produto,vendas})),
+  };
+}
+function iaStatusText(){
+  const b=localStorage.getItem('ia_backend');
+  document.getElementById('iaStatus').textContent = b ? 'backend configurado ✓' : 'backend não configurado — clique em Configurar';
+  document.getElementById('iaGen').disabled = !b;
+}
+function iaShow(html){ document.getElementById('iaCards').innerHTML=html; }
+function iaRenderCards(insights,usage){
+  if(!insights.length){ iaShow('<div class="ia-empty">A IA não retornou insights.</div>'); return; }
+  const sev=s=>['alta','media','baixa'].includes(String(s))?s:'baixa';
+  const cards=insights.map(i=>{
+    const s=sev(i.severidade); let verba='';
+    if(i.verba && i.verba.acao && i.verba.acao!=='manter'){
+      const v=i.verba, pct=(v.percentual!=null?(' '+Math.abs(v.percentual)+'%'):'');
+      verba=`<div class="ins-verba">💰 <b>Verba:</b> ${esc(v.acao)}${pct} ${v.nivel_ajuste?('no '+esc(v.nivel_ajuste)):''}${v.observacao?(' — '+esc(v.observacao)):''}<span class="ins-apply">Peça no chat para eu aplicar no Meta Ads.</span></div>`;
+    }
+    return `<div class="ins-card sev-${s}">
+      <div class="ins-head"><span class="ins-badge">${esc(i.nivel||'funil')} · ${esc(i.metrica||'')}</span><span class="ins-sev">${esc(s)}</span></div>
+      <div class="ins-title">${esc(i.titulo||'')}</div>
+      <div class="ins-diag">${esc(i.diagnostico||'')}</div>
+      <div class="ins-rec"><b>Ação:</b> ${esc(i.recomendacao||'')}</div>
+      ${i.estrutura?`<div class="ins-struct">Estrutura: ${esc(i.estrutura)}</div>`:''}
+      ${verba}
+    </div>`;
+  }).join('');
+  const u = usage ? `<div class="ia-empty" style="grid-column:1/-1">Tokens: entrada ${usage.input_tokens||'?'} · saída ${usage.output_tokens||'?'}</div>` : '';
+  iaShow(cards+u);
+}
+async function iaGenerate(){
+  const backend=localStorage.getItem('ia_backend'), pass=localStorage.getItem('ia_pass');
+  if(!backend||!pass){ document.getElementById('iaConfig').style.display='block'; return; }
+  const btn=document.getElementById('iaGen'); btn.classList.add('loading'); btn.disabled=true;
+  iaShow('<div class="ia-empty">Gerando insights com a IA… (pode levar alguns segundos)</div>');
+  try{
+    const res=await fetch(backend,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass,data:iaBuildData()})});
+    const j=await res.json().catch(()=>({error:'Resposta inválida do backend.'}));
+    if(!res.ok || j.error) iaShow('<div class="ins-card err"><div class="ins-title">Erro</div><div class="ins-diag">'+esc(j.error||('HTTP '+res.status))+'</div></div>');
+    else iaRenderCards(j.insights||[], j.usage);
+  }catch(e){ iaShow('<div class="ins-card err"><div class="ins-title">Falha de rede</div><div class="ins-diag">'+esc(e.message)+' — confira a URL do Worker (CORS/HTTPS).</div></div>'); }
+  finally{ btn.classList.remove('loading'); btn.disabled=false; }
+}
+function renderIA(){ iaStatusText(); }
+
 /* ---------------- date presets ---------------- */
 const PRESETS=[
   ['hoje','Hoje',()=>[TODAY,TODAY]],
@@ -671,12 +788,13 @@ function setPage(p){ STATE.page=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===p));
   document.getElementById('page-geral').classList.toggle('active',p==='geral');
   document.getElementById('page-meta').classList.toggle('active',p==='meta');
-  document.getElementById('ptitle').textContent = p==='meta'?'Meta Ads':'Visão Geral';
+  document.getElementById('page-ia').classList.toggle('active',p==='ia');
+  document.getElementById('ptitle').textContent = p==='meta'?'Meta Ads':(p==='ia'?'IA Insights':'Visão Geral');
   document.getElementById('navToggle').checked=false;
-  history.replaceState(null,'', p==='meta'?'#meta':'#geral');
+  history.replaceState(null,'', '#'+p);
   renderAll();
 }
-function renderAll(){ if(STATE.page==='meta') renderMeta(); else renderGeral(); }
+function renderAll(){ if(STATE.page==='meta') renderMeta(); else if(STATE.page==='ia') renderIA(); else renderGeral(); }
 
 function applyTheme(){ const t=localStorage.getItem('dm_theme'); if(t==='dark') document.documentElement.setAttribute('data-theme','dark'); else document.documentElement.removeAttribute('data-theme'); }
 applyTheme();
@@ -689,6 +807,19 @@ document.getElementById('dTo').addEventListener('change',e=>{ STATE.to=e.target.
 document.getElementById('clearBtn').addEventListener('click',()=>{ STATE.mSelC.clear();STATE.mSelA.clear();STATE.mSelAd.clear();STATE.selDays.clear(); applyPreset('mes'); });
 document.getElementById('refreshBtn').addEventListener('click',function(){ this.classList.add('loading'); location.href=location.pathname+'?t='+Date.now()+location.hash; });
 
+/* IA Insights config + geração */
+document.getElementById('iaCfgBtn').addEventListener('click',()=>{ const c=document.getElementById('iaConfig');
+  c.style.display = c.style.display==='none'?'block':'none';
+  document.getElementById('iaUrl').value=localStorage.getItem('ia_backend')||'';
+  document.getElementById('iaPass').value=localStorage.getItem('ia_pass')||''; });
+document.getElementById('iaSave').addEventListener('click',()=>{
+  const u=document.getElementById('iaUrl').value.trim(), p=document.getElementById('iaPass').value;
+  if(u) localStorage.setItem('ia_backend',u); else localStorage.removeItem('ia_backend');
+  if(p) localStorage.setItem('ia_pass',p); else localStorage.removeItem('ia_pass');
+  document.getElementById('iaCfgMsg').textContent='Salvo neste navegador ✓';
+  document.getElementById('iaConfig').style.display='none'; iaStatusText(); });
+document.getElementById('iaGen').addEventListener('click',iaGenerate);
+
 document.title=(B.client_sub?B.client_sub+' · ':'')+(B.client_name||'Dashboard');
 document.getElementById('logoMain').textContent=B.client_name||'—';
 document.getElementById('logoSub').textContent=B.client_sub||'';
@@ -699,8 +830,8 @@ document.getElementById('updated').innerHTML='Última atualização:<br>'+B.gene
 document.getElementById('buildFoot').textContent='build __BUILD_ID__';
 document.getElementById('buildFoot2').textContent='· build __BUILD_ID__';
 
-syncDateInputs(); renderPresets();
-setPage(location.hash==='#meta'?'meta':'geral');
+syncDateInputs(); renderPresets(); iaStatusText();
+setPage(location.hash==='#meta'?'meta':(location.hash==='#ia'?'ia':'geral'));
 
 /* auto-refresh com cache-bust ~30 min */
 setTimeout(()=>{ location.href=location.pathname+'?t='+Date.now()+location.hash; }, 30*60*1000);
