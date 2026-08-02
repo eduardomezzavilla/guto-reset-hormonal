@@ -1,96 +1,72 @@
-# CLAUDE.md — Template de Dashboard de Captura de Leads
+# CLAUDE.md — Dashboard de Controle de Tráfego Pago (Reset Hormonal · VSL)
 
 > Este arquivo é lido automaticamente pelo Claude Code ao abrir o repositório.
-> É um **TEMPLATE**: NÃO contém dados de nenhum cliente. Preencha os `<<PREENCHER>>`
-> seguindo o checklist abaixo para gerar a dashboard de um cliente novo.
-
----
-
-## ✅ CHECKLIST DE NOVO CLIENTE (faça nesta ordem)
-
-1. **Repositório** — crie um repo (privado) para o cliente e habilite Pages
-   (Settings → Pages → Source: **GitHub Actions**; o workflow habilita sozinho na 1ª execução).
-2. **`build/build.py` → identificadores da planilha**
-   - `SPREADSHEET_ID` — ID na URL da planilha (entre `/d/` e `/edit`).
-   - `GID_LEADS` — número após `gid=` na URL da aba de Leads.
-   - `GID_META` — idem para a aba de Meta Ads.
-3. **`build/build.py` → imposto**
-   - `TAX_FACTOR` — ex.: `1.13806` (+13,806%); use `1.0` se não houver imposto.
-4. **`build/build.py` → critério de MQL** (o que é um lead qualificado)
-   - Ajuste `MQL_MIN_MIL` **ou** reescreva `is_qualified()` para o critério real
-     (faixa de faturamento, leadscore "A", coluna "QLF", resposta de formulário…).
-5. **`build/build.py` → mapa de colunas** (`header_index` da aba de Leads)
-   - Confira/ajuste os aliases e o fallback posicional, principalmente
-     `profession` e `faturamento` (são perguntas do formulário; o nome varia por cliente).
-6. **`build/build.py` → rótulos da interface**
-   - `CLIENT_NAME`, `CLIENT_SUB`, `MQL_LABEL`, `TAX_LABEL`, `QUAL_DESC`, `BUCKET_ORDER`.
-7. **`CLAUDE.md` e `README.md`** — preencha nome do projeto, URL pública, tabela de
-   abas/colunas e convenções de campanha do cliente (`<<PREENCHER>>`).
-8. **Teste local** — `python build/build.py --leads-file leads.csv --meta-file meta.csv --out dist/index.html`
-   e confira as 2 páginas, tema claro/escuro, filtros e multi-seleção (Ctrl).
-9. **Publicar** — commit → `main`; o GitHub Actions builda e publica no Pages.
-10. **Automatizar** — configure o `cron-job.org` (ver `SETUP-CRON.md`) com um token
-    do cliente (fine-grained, só **Actions: read/write** no repo dele).
-
-> Terminou o checklist quando **nenhum `<<PREENCHER>>`** restar:
-> `grep -rn "PREENCHER" .` deve não retornar nada.
+> Dashboard de um funil **VSL / tráfego direto** (Meta Ads × Compradores).
+> Nasceu do `dash-template` (originalmente Captura de Leads) e foi adaptado para VSL.
 
 ---
 
 ## O que é
 
-Dashboard de **Captura de Leads** — app de BI estático (HTML/CSS/JS + Chart.js via
-CDN) publicado no **GitHub Pages**, que cruza a lista de **Leads** com o gerenciador
-**Meta Ads** e se atualiza a cada ~30 min (build na nuvem via GitHub Actions,
+Dashboard de **Controle de Tráfego Pago** — app de BI estático (HTML/CSS/JS + Chart.js
+via CDN) publicado no **GitHub Pages**, que cruza o gerenciador **Meta Ads** com a lista
+de **Compradores** e se atualiza a cada ~30 min (build na nuvem via GitHub Actions,
 disparado pelo cron-job.org). **Somente leitura** das planilhas.
 
-- **URL pública:** `<<PREENCHER: https://<owner>.github.io/<repo>/>>`
-- **Cliente/projeto:** `<<PREENCHER: nome do cliente>>`
+- **URL pública:** `https://eduardomezzavilla.github.io/guto-reset-hormonal/`
+- **Cliente/projeto:** Reset Hormonal (Guto Galamba) — funil VSL
+- **Tipo de funil:** VSL (não há etapa de Leads/MQL)
 
 ## Fontes de dados (Google Sheets)
 
-Spreadsheet ID: `<<PREENCHER: ID da planilha>>` (público — leitura via export CSV).
+Spreadsheet ID: `1SmqXOiITq97O1gtYvUfIbAAjXP3dOM50UNZ_4VepypU` (leitura via export CSV).
 
 | Aba | gid | Colunas usadas |
 |-----|-----|----------------|
-| **Leads** | `<<PREENCHER: gid Leads>>` | `<<PREENCHER: mapa de colunas — id · created_time · ad_name · adset_name · campaign_name · is_organic · platform · profissão · faturamento · nome · email · phone>>` |
-| **Meta Ads** | `<<PREENCHER: gid Meta Ads>>` | Day · Campaign Name · Ad Set Name · Ad Name · Amount Spent · Impressions · Link Clicks · Leads |
+| **Meta Ads** | `1195145852` | Day · Campaign Name · Ad Set Name · Ad Name · Amount Spent · Impressions · Link Clicks · Landing Page Views · Checkouts Initiated |
+| **Compradores** | `1836439885` | Data de Criação · Cliente / Nome · Cliente / E-mail · Produto · Valor da Venda · UTM Content · UTM Campaign · UTM Medium · Status |
 
 URL de export CSV: `https://docs.google.com/spreadsheets/d/<ID>/export?format=csv&gid=<GID>`
 
-### Regra de Lead Qualificado (MQL)
-`<<PREENCHER: descreva o critério, ex.: faturamento médio mensal ≥ 30 mil (coluna N)>>`
-(lógica em `build.py` → `is_qualified` / `MQL_MIN_MIL`).
+### Métricas do funil VSL (`build.py` + `template.html`)
+`Gasto → Impressões → Cliques → Page Views → Checkouts → Vendas → Faturamento`
+
+Gasto · Impressões · CPM · Cliques · CPC · CTR · Page Views · CPV · CR (Cliques/PageViews) ·
+Checkouts · CPIC · VisCHK (Checkouts/PageViews) · Vendas · CAC (Gasto/Vendas) ·
+ConvCHK (Vendas/Checkouts) · Faturamento · ROAS (Faturamento/Gasto) · Ticket (Faturamento/Vendas).
+
+### Produto principal / atribuição
+- **Produto principal** = `MAIN_PRODUCT_PREFIX = "protocolo reset hormonal"` (inclui a
+  variante "- 35%"). Base de **Vendas / CAC / ConvCHK / Ticket**.
+- **Faturamento / ROAS** = soma de **todos os produtos** do funil (orderbumps/upsells).
+- Uma venda entra no funil se: é o produto principal **OU** seu `UTM Content` casa com
+  um `Ad Name` do Meta (captura orderbumps/upsells que carregam a UTM do anúncio). Vendas
+  de outros funis (UTM/produto não relacionados) ficam de fora. Só conta status pago.
+- **Sem coluna de Receita** → não há Receita/ROAS R/Ticket R (por decisão do cliente).
 
 ### Imposto Meta Ads
-Toggle ON aplica `<<PREENCHER: ex.: ×1,13806 (+13,806%)>>` sobre custos do Meta.
-Constante `TAX_FACTOR` em `build.py`.
+Toggle ON aplica **×1,13806 (+13,806%)** sobre os custos do Meta. Constante `TAX_FACTOR`.
 
-### Convenções de campanha do cliente
-`<<PREENCHER: ex.: E2-CAP = Captura, E6-VEN = Vendas; Campaign=utm_campaign, Ad Set=utm_medium, Ad Name=utm_content>>`
+### Convenções de campanha
+`Campaign Name = utm_campaign`, `Ad Set Name = utm_medium`, `Ad Name = utm_content`.
+As vendas são atribuídas à campanha/conjunto pelo `Ad Name` correspondente no Meta.
 
 ## Arquitetura / arquivos
 
 ```
-build/build.py        # lê os 2 CSVs (read-only), emite REGISTROS BRUTOS (leads[]/meta[]) no HTML
-build/template.html   # o app inteiro: CSS + JS (ENGINE — não muda entre clientes)
+build/build.py        # lê os 2 CSVs (read-only), emite REGISTROS BRUTOS (meta[]/sales[]) no HTML
+build/template.html   # o app inteiro: CSS + JS (ENGINE)
 .github/workflows/deploy.yml  # roda build.py e publica no Pages (workflow_dispatch + schedule + push)
 dist/index.html       # saída gerada (gitignored; o Actions reconstrói)
-GUIA-REPLICACAO.md    # engine explicada + como adaptar + solução dos problemas de publicação
-SETUP-CRON.md         # valores do cron-job.org (marcadores)
+GUIA-REPLICACAO.md    # engine explicada + solução dos problemas de publicação
+SETUP-CRON.md         # valores do cron-job.org
 ```
 
 O `build.py` **não agrega**: exporta as linhas cruas e toda a lógica (filtros, KPIs,
-tabelas, gráficos, heatmap, imposto, tema) roda no navegador. A **engine**
-(`template.html`) é igual para todos os clientes; só o `build.py` (config) e os
-textos de contexto mudam.
+tabelas, gráficos, heatmap, imposto, tema) roda no navegador.
 
-## Como estender (outros cruzamentos/funis)
-
-A engine (tabela, filtro cruzado, gráficos, publicação) serve para qualquer funil.
-Para um tipo diferente (vendas, tráfego, high-ticket) ou mais fontes (agendamentos,
-check-ins, compradores): adicione novos arrays no `build.py` e declare os novos
-KPIs/etapas/dimensões — **sem** reescrever o motor. Ver `GUIA-REPLICACAO.md` §9.
+Teste local:
+`python build/build.py --meta-file meta.csv --sales-file sales.csv --out dist/index.html`
 
 ## Publicação — problemas conhecidos e soluções
 

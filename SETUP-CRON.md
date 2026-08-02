@@ -1,8 +1,7 @@
 # Ativação + configuração do cron-job.org (TEMPLATE)
 
-> Substitua `<<PREENCHER: owner>>` e `<<PREENCHER: repo>>` pelo dono/repositório do
-> cliente, e use um **token novo do cliente** (nunca reutilize tokens entre clientes,
-> nunca comite token no repositório).
+> Owner/repo já preenchidos para **eduardomezzavilla/guto-reset-hormonal**.
+> O **token nunca é comitado** no repositório: ele vai apenas no cron-job.org.
 
 ## Passo 1 — Colocar na branch `main` (uma vez)
 
@@ -10,14 +9,14 @@
 Faça o merge para a `main`. Na 1ª execução o workflow habilita o GitHub Pages
 automaticamente (`actions/configure-pages` com `enablement: true`).
 
-URL pública após publicar: `<<PREENCHER: https://<owner>.github.io/<repo>/>>`
+URL pública após publicar: `https://eduardomezzavilla.github.io/guto-reset-hormonal/`
 
 Disparar a 1ª execução na mão: aba **Actions** → *Build & Deploy Dashboard* → **Run workflow**.
 
 ## Passo 2 — Token (fine-grained, recomendado)
 
 GitHub → *Settings* → *Developer settings* → **Fine-grained tokens** → *Generate*:
-- Repository access: **Only select repositories → `<<PREENCHER: repo>>`**
+- Repository access: **Only select repositories → `guto-reset-hormonal`**
 - Permissions → **Actions: Read and write**
 
 Guarde o token; ele vai só no cron-job.org.
@@ -26,7 +25,7 @@ Guarde o token; ele vai só no cron-job.org.
 
 ### URL
 ```
-https://api.github.com/repos/<<PREENCHER: owner>>/<<PREENCHER: repo>>/actions/workflows/deploy.yml/dispatches
+https://api.github.com/repos/eduardomezzavilla/guto-reset-hormonal/actions/workflows/deploy.yml/dispatches
 ```
 ### Método
 ```
@@ -41,7 +40,7 @@ A cada 30 minutos  (Every 30 minutes)
 Accept: application/vnd.github+json
 ```
 ```
-Authorization: Bearer <<PREENCHER: TOKEN do cliente>>
+Authorization: Bearer SEU_TOKEN_AQUI
 ```
 ```
 X-GitHub-Api-Version: 2022-11-28

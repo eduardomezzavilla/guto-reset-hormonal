@@ -1,15 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-TEMPLATE — Dashboard de Captura de Leads (Meta Ads × Lista de Leads).
+Dashboard de Controle de Tráfego Pago — Funil VSL (Meta Ads × Compradores).
 
 Lê duas abas de uma planilha Google (export CSV público) e emite os REGISTROS
-BRUTOS (leads[] / meta[]) dentro do HTML. Todo o cálculo/filtro/gráfico roda no
+BRUTOS (meta[] / sales[]) dentro do HTML. Todo o cálculo/filtro/gráfico roda no
 navegador (ver build/template.html). Somente leitura; nunca escreve nas planilhas.
 
->>> Antes de usar, preencha TODOS os <<PREENCHER>> (veja o CHECKLIST no CLAUDE.md).
+Funil VSL / tráfego direto — não há etapa de "Leads"/"MQL":
+    Gasto → Impressões → Cliques → Page Views → Checkouts → Vendas → Faturamento
 
-Teste local: python build/build.py --leads-file leads.csv --meta-file meta.csv --out dist/index.html
+Teste local: python build/build.py --meta-file meta.csv --sales-file sales.csv --out dist/index.html
 """
 from __future__ import annotations
 
@@ -25,23 +26,23 @@ import urllib.request
 from datetime import datetime, timezone, timedelta
 
 # ==========================================================================
-# CONFIGURAÇÃO DO CLIENTE  (preencher para cada novo relatório)
+# CONFIGURAÇÃO DO CLIENTE
 # ==========================================================================
-SPREADSHEET_ID = "<<PREENCHER: ID da planilha Google — está na URL entre /d/ e /edit>>"
-GID_LEADS = "<<PREENCHER: gid da aba de Leads — número após gid= na URL da aba>>"
-GID_META  = "<<PREENCHER: gid da aba de Meta Ads>>"
+SPREADSHEET_ID = "1SmqXOiITq97O1gtYvUfIbAAjXP3dOM50UNZ_4VepypU"
+GID_META  = "1195145852"   # aba Meta Ads
+GID_SALES = "1836439885"   # aba Compradores
 
-TAX_FACTOR = 1.0   # <<PREENCHER: fator do imposto Meta (ex.: 1.13806 = +13,806%). Use 1.0 se não houver imposto>>
-MQL_MIN_MIL = 30   # <<PREENCHER: faturamento mínimo (em milhares) para contar como MQL. Ver is_qualified()>>
+TAX_FACTOR = 1.13806       # imposto Meta: toggle ON aplica ×1,13806 (+13,806%)
 
-# Rótulos exibidos na interface (o template.html lê estes valores do JSON):
-CLIENT_NAME = "<<PREENCHER: nome/marca do cliente, ex.: Acme>>"
-CLIENT_SUB  = "<<PREENCHER: subtítulo, ex.: Captura de Leads>>"
-MQL_LABEL   = "<<PREENCHER: rótulo do lead qualificado, ex.: MQLs (>=30k)>>"
-TAX_LABEL   = "<<PREENCHER: rótulo do toggle de imposto, ex.: Imposto Meta x1,13806>>"
-QUAL_DESC   = "<<PREENCHER: descrição curta do critério, ex.: >= 30 mil>>"
-# Ordem das faixas no gráfico "Leads por faixa" (deixe [] para ordenar por contagem):
-BUCKET_ORDER: list[str] = []   # <<PREENCHER (opcional): ex.: ["Menos de 5 mil","Entre 5 a 10 mil", ...]>>
+# Produto principal do funil (base de Vendas/CAC/ConvCHK/Ticket).
+# Casamento por prefixo (sem acento, minúsculas) — inclui a variante "- 35%".
+MAIN_PRODUCT_PREFIX = "protocolo reset hormonal"
+
+# Rótulos exibidos na interface (lidos pelo template.html):
+CLIENT_NAME  = "Reset Hormonal"
+CLIENT_SUB   = "Controle de Tráfego · VSL"
+TAX_LABEL    = "Imposto Meta ×1,13806"
+MAIN_PRODUCT = "Protocolo Reset Hormonal"
 # ==========================================================================
 
 EXPORT_URL = "https://docs.google.com/spreadsheets/d/{sid}/export?format=csv&gid={gid}"
@@ -52,7 +53,7 @@ BRT = timezone(timedelta(hours=-3))   # horário de Brasília (exibição)
 # Leitura (só leitura das planilhas)
 # --------------------------------------------------------------------------- #
 def fetch_csv(url: str) -> list[list[str]]:
-    req = urllib.request.Request(url, headers={"User-Agent": "dash-template-bot/1.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "dash-vsl-bot/1.0"})
     with urllib.request.urlopen(req, timeout=60) as resp:
         raw = resp.read().decode("utf-8", errors="replace")
     return list(csv.reader(io.StringIO(raw)))
@@ -113,42 +114,20 @@ def parse_date(v: str) -> str | None:
     return None
 
 
-def is_test_lead(rowtext: str) -> bool:
+def is_test_row(rowtext: str) -> bool:
     return "<test lead" in rowtext.lower()
 
 
-_NUM_RE = re.compile(r"\d+")
+def is_paid(status: str) -> bool:
+    """Considera venda apenas status pago/aprovado. Sem coluna Status -> conta."""
+    sn = norm(status)
+    if not sn:
+        return True
+    return any(k in sn for k in ("pag", "aprov", "paid", "conclu", "complet", "ativ"))
 
 
-def is_qualified(bucket: str | None) -> bool:
-    """
-    <<PREENCHER: REGRA DE LEAD QUALIFICADO (MQL) DESTE CLIENTE>>
-
-    Implementação de exemplo: coluna de faturamento com faixas em texto
-    ('menos_de_5_mil', 'entre_30_e_50_mil', 'mais_de_100_mil', ...). Qualifica
-    quando o limite inferior da faixa é >= MQL_MIN_MIL.
-
-    Para outro critério (leadscore 'A'/'A+', coluna 'QLF', resposta específica
-    de formulário, etc.), REESCREVA esta função conforme a planilha do cliente.
-    """
-    s = norm(bucket)
-    if not s or "test lead" in s:
-        return False
-    nums = [int(n) for n in _NUM_RE.findall(s)]
-    if not nums:
-        return False
-    if "menos" in s or "ate " in s or "abaixo" in s:
-        return False
-    if "entre" in s:
-        return min(nums) >= MQL_MIN_MIL
-    if any(k in s for k in ("mais", "acima", "superior", "maior")):
-        return max(nums) >= MQL_MIN_MIL
-    return max(nums) >= MQL_MIN_MIL
-
-
-def pretty_bucket(bucket: str) -> str:
-    s = (bucket or "").strip()
-    return s.replace("_", " ").replace(" e ", " a ").capitalize() if s else "Sem resposta"
+def is_main_product(prod: str) -> bool:
+    return norm(prod).startswith(MAIN_PRODUCT_PREFIX)
 
 
 # ----- Máscara de PII (a página publicada é pública) ----- #
@@ -161,21 +140,11 @@ def mask_email(e: str) -> str:
     return f"{keep}****@{dom}"
 
 
-def mask_phone(p: str) -> str:
-    digits = re.sub(r"\D", "", p or "")
-    return f"…{digits[-4:]}" if len(digits) >= 4 else "—"
-
-
 def first_last_initial(name: str) -> str:
     parts = (name or "").strip().split()
     if not parts:
         return "—"
     return parts[0] if len(parts) == 1 else f"{parts[0]} {parts[-1][:1]}."
-
-
-def valid_utm(campaign: str) -> bool:
-    c = (campaign or "").strip()
-    return bool(c) and c not in ("-", "—")
 
 
 # --------------------------------------------------------------------------- #
@@ -207,84 +176,98 @@ def cell(row, i):
 # --------------------------------------------------------------------------- #
 # Processamento -> registros brutos
 # --------------------------------------------------------------------------- #
-def process(leads_rows, meta_rows):
-    # >>> Aba de LEADS. Confira os nomes/posições das colunas com a planilha do cliente.
-    #     Colunas 'profession' e 'faturamento' costumam ser perguntas do formulário
-    #     (nomes variam por cliente) — ajuste os aliases/posições abaixo.
-    lheader = leads_rows[0] if leads_rows else []
-    lidx = header_index(
-        lheader,
-        {"created": ["created_time", "data", "created"], "ad_name": ["ad_name"],
-         "adset_name": ["adset_name"], "campaign": ["campaign_name"], "is_organic": ["is_organic"],
-         "platform": ["platform"],
-         "profession": ["<<PREENCHER: coluna de profissão/segmentação, ex.: qual_sua_profissao>>", "profiss"],
-         "faturamento": ["<<PREENCHER: coluna usada no critério de MQL, ex.: qual_seu_faturamento>>", "faturamento"],
-         "name": ["full_name", "nome"], "email": ["email"], "phone": ["phone_number", "phone", "telefone"]},
-        # fallback posicional (0-based) — ajuste conforme o layout do cliente:
-        {"created": 1, "ad_name": 3, "adset_name": 5, "campaign": 7, "is_organic": 10, "platform": 11,
-         "profession": 12, "faturamento": 13, "name": 14, "email": 15, "phone": 16},
-    )
-
-    leads = []
-    for row in leads_rows[1:]:
-        if not any((c or "").strip() for c in row):
-            continue
-        if is_test_lead(" ".join(str(c) for c in row)):
-            continue
-        organic = norm(cell(row, lidx["is_organic"])) in ("true", "1", "sim", "verdadeiro")
-        platform = norm(cell(row, lidx["platform"]))
-        campaign = cell(row, lidx["campaign"])
-        if organic:
-            src = "org"
-        elif norm(campaign).startswith("goog") or platform in ("google", "youtube"):
-            src = "google"
-        elif platform in ("ig", "fb", "instagram", "facebook") or campaign:
-            src = "meta"
-        else:
-            src = "outros"
-        fat = cell(row, lidx["faturamento"])
-        leads.append({
-            "d": parse_date(cell(row, lidx["created"])),
-            "src": src,
-            "plat": platform or "—",
-            "camp": campaign or "(sem campanha)",
-            "adset": cell(row, lidx["adset_name"]) or "(sem conjunto)",
-            "ad": cell(row, lidx["ad_name"]) or "(sem anúncio)",
-            "prof": (cell(row, lidx["profession"]) or "Sem resposta").replace("_", " ").capitalize(),
-            "bucket": pretty_bucket(fat),
-            "q": 1 if is_qualified(fat) else 0,
-            "utm": 1 if valid_utm(campaign) else 0,
-            "nm": first_last_initial(cell(row, lidx["name"])),
-            "em": mask_email(cell(row, lidx["email"])),
-            "ph": mask_phone(cell(row, lidx["phone"])),
-        })
-
-    # >>> Aba de META ADS. Colunas padrão do gerenciador (ajuste se necessário).
+def process(meta_rows, sales_rows):
+    # ---------------- Aba META ADS ----------------
+    # Colunas reais: Day · Campaign Name · Ad Set Name · Ad Name · Amount Spent ·
+    #   Impressions · Link Clicks · Landing Page Views · Checkouts Initiated · ...
     mheader = meta_rows[0] if meta_rows else []
     midx = header_index(
         mheader,
-        {"day": ["day", "data"], "campaign": ["campaign name", "campaign"], "adset": ["ad set name", "adset"],
-         "ad": ["ad name"], "spent": ["amount spent", "valor gasto", "gasto"], "impr": ["impressions", "impress"],
-         "clicks": ["link clicks", "clicks", "cliques"], "leads": ["leads"]},
-        {"day": 0, "campaign": 1, "adset": 2, "ad": 3, "spent": 4, "impr": 5, "clicks": 6, "leads": 7},
+        {"day": ["day", "data"], "campaign": ["campaign name", "campaign"],
+         "adset": ["ad set name", "adset", "ad set"], "ad": ["ad name"],
+         "spent": ["amount spent", "valor gasto", "gasto"], "impr": ["impressions", "impress"],
+         "clicks": ["link clicks", "clicks", "cliques"],
+         "pv": ["landing page views", "page views", "pageview", "landing"],
+         "ck": ["checkouts initiated", "checkouts", "initiate checkout", "checkout"]},
+        {"day": 0, "campaign": 1, "adset": 2, "ad": 3, "spent": 4, "impr": 5,
+         "clicks": 6, "pv": 7, "ck": 8},
     )
 
     meta = []
+    ad_map = {}   # norm(ad_name) -> (campaign, adset) para atribuir as vendas
     for row in meta_rows[1:]:
         if not any((c or "").strip() for c in row):
             continue
+        if is_test_row(" ".join(str(c) for c in row)):
+            continue
+        camp = cell(row, midx["campaign"]) or "(sem campanha)"
+        adset = cell(row, midx["adset"]) or "(sem conjunto)"
+        ad = cell(row, midx["ad"]) or "(sem anúncio)"
+        an = norm(ad)
+        if an and an not in ad_map:
+            ad_map[an] = (camp, adset)
         meta.append({
             "d": parse_date(cell(row, midx["day"])),
-            "camp": cell(row, midx["campaign"]) or "(sem campanha)",
-            "adset": cell(row, midx["adset"]) or "(sem conjunto)",
-            "ad": cell(row, midx["ad"]) or "(sem anúncio)",
+            "camp": camp, "adset": adset, "ad": ad,
             "sp": round(to_float(cell(row, midx["spent"])), 4),
             "im": to_float(cell(row, midx["impr"])),
             "cl": to_float(cell(row, midx["clicks"])),
-            "ml": to_float(cell(row, midx["leads"])),
+            "pv": to_float(cell(row, midx["pv"])),
+            "ck": to_float(cell(row, midx["ck"])),
         })
 
-    dates = sorted({d for d in ([l["d"] for l in leads if l["d"]] + [m["d"] for m in meta if m["d"]])})
+    # ---------------- Aba COMPRADORES ----------------
+    # Colunas reais: Data de Criação · Cliente / Nome · Cliente / E-mail · Produto ·
+    #   Valor da Venda · UTM Content · UTM Campaign · UTM Medium · UTM Source · Status
+    sheader = sales_rows[0] if sales_rows else []
+    sidx = header_index(
+        sheader,
+        {"created": ["data de criacao", "data", "created", "created_time"],
+         "name": ["cliente / nome", "nome", "full_name"],
+         "email": ["cliente / e-mail", "e-mail", "email"],
+         "prod": ["produto", "product"],
+         "val": ["valor da venda", "valor", "value", "amount"],
+         "utm_content": ["utm content", "utm_content"],
+         "utm_campaign": ["utm campaign", "utm_campaign"],
+         "utm_medium": ["utm medium", "utm_medium"],
+         "status": ["status"]},
+        {"created": 0, "name": 1, "email": 2, "prod": 3, "val": 4,
+         "utm_content": 5, "utm_campaign": 6, "utm_medium": 7, "status": 9},
+    )
+
+    sales = []
+    for row in sales_rows[1:]:
+        if not any((c or "").strip() for c in row):
+            continue
+        if is_test_row(" ".join(str(c) for c in row)):
+            continue
+        if not is_paid(cell(row, sidx["status"])):
+            continue
+        prod = cell(row, sidx["prod"])
+        ad = cell(row, sidx["utm_content"]) or "(sem anúncio)"
+        an = norm(ad)
+        main = is_main_product(prod)
+        # Atribuição ao tráfego rastreado: produto principal OU anúncio que existe
+        # no Meta (captura orderbumps/upsells que carregam a UTM do anúncio).
+        attributed = main or (an in ad_map)
+        if not attributed:
+            continue
+        if an in ad_map:
+            camp, adset = ad_map[an]
+        else:
+            camp = cell(row, sidx["utm_campaign"]) or "(sem campanha)"
+            adset = cell(row, sidx["utm_medium"]) or "(sem conjunto)"
+        sales.append({
+            "d": parse_date(cell(row, sidx["created"])),
+            "camp": camp, "adset": adset, "ad": ad,
+            "prod": prod or "—",
+            "val": round(to_float(cell(row, sidx["val"])), 2),
+            "main": 1 if main else 0,
+            "nm": first_last_initial(cell(row, sidx["name"])),
+            "em": mask_email(cell(row, sidx["email"])),
+        })
+
+    dates = sorted({d for d in ([m["d"] for m in meta if m["d"]] + [s["d"] for s in sales if s["d"]])})
     now_brt = datetime.now(BRT)
     return {
         "build": {
@@ -294,16 +277,13 @@ def process(leads_rows, meta_rows):
             "date_min": dates[0] if dates else None,
             "date_max": dates[-1] if dates else None,
             "tax_factor": TAX_FACTOR,
-            # rótulos lidos pelo template.html:
             "client_name": CLIENT_NAME,
             "client_sub": CLIENT_SUB,
-            "mql_label": MQL_LABEL,
             "tax_label": TAX_LABEL,
-            "qual_desc": QUAL_DESC,
-            "bucket_order": BUCKET_ORDER,
+            "main_product": MAIN_PRODUCT,
         },
-        "leads": leads,
         "meta": meta,
+        "sales": sales,
     }
 
 
@@ -321,29 +301,27 @@ def render(data, template_path):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--leads-file")
     ap.add_argument("--meta-file")
+    ap.add_argument("--sales-file")
     ap.add_argument("--template", default="build/template.html")
     ap.add_argument("--out", default="dist/index.html")
     args = ap.parse_args()
 
-    if not args.leads_file and "<<PREENCHER" in SPREADSHEET_ID:
-        sys.exit("ERRO: preencha SPREADSHEET_ID/GID_* (ou use --leads-file/--meta-file para teste). Veja o CHECKLIST no CLAUDE.md.")
-
-    leads_rows = load_rows(EXPORT_URL.format(sid=SPREADSHEET_ID, gid=GID_LEADS), args.leads_file)
     meta_rows = load_rows(EXPORT_URL.format(sid=SPREADSHEET_ID, gid=GID_META), args.meta_file)
-    data = process(leads_rows, meta_rows)
+    sales_rows = load_rows(EXPORT_URL.format(sid=SPREADSHEET_ID, gid=GID_SALES), args.sales_file)
+    data = process(meta_rows, sales_rows)
 
     os.makedirs(os.path.dirname(args.out) or ".", exist_ok=True)
     with open(args.out, "w", encoding="utf-8") as f:
         f.write(render(data, args.template))
 
     b = data["build"]
-    q = sum(l["q"] for l in data["leads"])
+    vendas = sum(s["main"] for s in data["sales"])
+    fat = sum(s["val"] for s in data["sales"])
     print("== build ok ==", file=sys.stderr)
     print(f"  periodo : {b['date_min']} -> {b['date_max']}", file=sys.stderr)
-    print(f"  leads   : {len(data['leads'])}  MQLs: {q}", file=sys.stderr)
     print(f"  meta    : {len(data['meta'])} linhas", file=sys.stderr)
+    print(f"  sales   : {len(data['sales'])} linhas (funil) · Vendas(principal): {vendas} · Fat: R$ {fat:,.2f}", file=sys.stderr)
     print(f"  out     : {args.out}", file=sys.stderr)
 
 
