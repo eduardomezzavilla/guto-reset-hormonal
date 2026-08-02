@@ -86,8 +86,7 @@ export default {
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 3000,
-          thinking: { type: "disabled" },
+          max_tokens: 4096,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMsg }],
         }),

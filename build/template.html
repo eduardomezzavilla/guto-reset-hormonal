@@ -748,17 +748,19 @@ function iaRenderCards(insights,usage){
   const u = usage ? `<div class="ia-empty" style="grid-column:1/-1">Tokens: entrada ${usage.input_tokens||'?'} · saída ${usage.output_tokens||'?'}</div>` : '';
   iaShow(cards+u);
 }
+function iaNormUrl(u){ u=(u||'').trim(); if(u && !/^https?:\/\//i.test(u)) u='https://'+u; return u; }
 async function iaGenerate(){
-  const backend=localStorage.getItem('ia_backend'), pass=localStorage.getItem('ia_pass');
+  const backend=iaNormUrl(localStorage.getItem('ia_backend')), pass=localStorage.getItem('ia_pass');
   if(!backend||!pass){ document.getElementById('iaConfig').style.display='block'; return; }
   const btn=document.getElementById('iaGen'); btn.classList.add('loading'); btn.disabled=true;
   iaShow('<div class="ia-empty">Gerando insights com a IA… (pode levar alguns segundos)</div>');
   try{
     const res=await fetch(backend,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pass,data:iaBuildData()})});
-    const j=await res.json().catch(()=>({error:'Resposta inválida do backend.'}));
-    if(!res.ok || j.error) iaShow('<div class="ins-card err"><div class="ins-title">Erro</div><div class="ins-diag">'+esc(j.error||('HTTP '+res.status))+'</div></div>');
+    const txt=await res.text(); let j=null; try{ j=JSON.parse(txt); }catch{}
+    if(!j){ iaShow('<div class="ins-card err"><div class="ins-title">Resposta inválida do backend</div><div class="ins-diag">HTTP '+res.status+'. A URL do Worker pode estar errada ou o Worker não está publicado. Abra a URL no navegador: deve mostrar <code>{"error":"Use POST."}</code>.</div><div class="ins-struct">'+esc(txt.slice(0,200))+'</div></div>'); return; }
+    if(!res.ok || j.error) iaShow('<div class="ins-card err"><div class="ins-title">Erro</div><div class="ins-diag">'+esc(j.error||('HTTP '+res.status))+(j.detail?(' — '+esc(String(j.detail).slice(0,200))):'')+'</div></div>');
     else iaRenderCards(j.insights||[], j.usage);
-  }catch(e){ iaShow('<div class="ins-card err"><div class="ins-title">Falha de rede</div><div class="ins-diag">'+esc(e.message)+' — confira a URL do Worker (CORS/HTTPS).</div></div>'); }
+  }catch(e){ iaShow('<div class="ins-card err"><div class="ins-title">Falha de rede</div><div class="ins-diag">'+esc(e.message)+' — a URL deve começar com https:// e terminar em .workers.dev, e o Worker precisa estar publicado (CORS).</div></div>'); }
   finally{ btn.classList.remove('loading'); btn.disabled=false; }
 }
 function renderIA(){ iaStatusText(); }
@@ -813,7 +815,7 @@ document.getElementById('iaCfgBtn').addEventListener('click',()=>{ const c=docum
   document.getElementById('iaUrl').value=localStorage.getItem('ia_backend')||'';
   document.getElementById('iaPass').value=localStorage.getItem('ia_pass')||''; });
 document.getElementById('iaSave').addEventListener('click',()=>{
-  const u=document.getElementById('iaUrl').value.trim(), p=document.getElementById('iaPass').value;
+  const u=iaNormUrl(document.getElementById('iaUrl').value), p=document.getElementById('iaPass').value;
   if(u) localStorage.setItem('ia_backend',u); else localStorage.removeItem('ia_backend');
   if(p) localStorage.setItem('ia_pass',p); else localStorage.removeItem('ia_pass');
   document.getElementById('iaCfgMsg').textContent='Salvo neste navegador ✓';
