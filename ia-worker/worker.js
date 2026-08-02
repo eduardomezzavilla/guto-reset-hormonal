@@ -1,5 +1,6 @@
 /**
  * Cloudflare Worker — backend da aba "IA Insights" do dashboard Reset Hormonal.
+ * Deploy automatizado via GitHub Actions (.github/workflows/deploy-worker.yml).
  *
  * A página (GitHub Pages, pública) envia um POST com { password, data }.
  * O Worker valida a senha, chama a API da Anthropic (Claude) com um system
