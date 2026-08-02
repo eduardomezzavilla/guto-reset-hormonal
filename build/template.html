@@ -88,6 +88,12 @@
   .card h3{margin:0 0 2px; font-size:14px}
   .card .hint{font-size:12px; color:var(--muted); margin:0 0 10px}
 
+  /* combo chart + tabela colados na mesma seção */
+  .panel{background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden}
+  .panel .panel-chart{padding:16px 16px 6px}
+  .panel .panel-chart h3{margin:0 0 2px; font-size:14px}
+  .panel .panel-chart .hint{font-size:12px; color:var(--muted); margin:0 0 8px}
+
   /* KPIs */
   .kpis{display:grid; gap:12px}
   .kpis.n1{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
@@ -103,24 +109,22 @@
   .pill.q{color:var(--good); border-color:#bfe6bf}
 
   .chart-box{position:relative; height:260px}
-  .chart-sm{height:170px}
+  .chart-sm{height:190px}
 
   /* Funnel */
   .funnel{display:flex; flex-direction:column; gap:7px}
   .step{display:flex; align-items:center; justify-content:space-between; gap:14px; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:11px 15px; border-left:4px solid var(--accent-blue)}
-  .step.na{border-left-color:var(--border); opacity:.7}
   .step .m-label{font-size:11.5px; color:var(--muted)}
   .step .m-val{font-size:20px; font-weight:700; letter-spacing:-.02em}
   .step .secs{display:flex; gap:18px; flex-wrap:wrap; text-align:right}
   .step .secs .s-label{font-size:10.5px; color:var(--muted); display:block}
   .step .secs .s-val{font-size:14px; font-weight:600; font-variant-numeric:tabular-nums}
-  .na-tag{font-size:10.5px; color:var(--muted); border:1px dashed var(--border); border-radius:999px; padding:2px 8px}
 
   /* Tables */
   .table-chart-pair{background:var(--surface); border:1px solid var(--border); border-radius:14px; overflow:hidden; margin-top:16px}
   .table-chart-pair .thead-title{padding:12px 15px 0; font-weight:600; font-size:14px}
   .tbl-wrap{overflow:auto; position:relative}
-  .tbl-normal{max-height:230px}
+  .tbl-normal{max-height:250px}
   .tbl-double{max-height:420px}
   table.dt{border-collapse:separate; border-spacing:0; min-width:100%; font-size:12.5px; table-layout:fixed}
   table.dt th, table.dt td{padding:7px 10px; border-bottom:1px solid var(--border); white-space:nowrap; overflow:hidden}
@@ -137,8 +141,8 @@
   table.dt tbody tr.sel{background:var(--selected)}
   table.dt tfoot td{position:sticky; bottom:0; background:var(--tfoot); font-weight:700; border-top:2px solid var(--border); text-align:right}
   table.dt tfoot td.dim{text-align:left}
-  .tag-q{color:var(--good); font-weight:700}
-  .pair-chart{border-top:1px solid var(--border); padding:8px 10px 4px; height:150px; position:relative}
+  .pair-chart{border-top:1px solid var(--border); padding:8px 10px 4px; height:170px; position:relative}
+  .pair-chart .pc-title{font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:.05em; padding:0 4px 2px}
 
   .note{font-size:11.5px; color:var(--muted); margin-top:10px}
   .foot{margin-top:26px; font-size:11.5px; color:var(--muted); border-top:1px solid var(--border); padding-top:12px}
@@ -158,7 +162,7 @@
     <div class="logo"><div class="logo-main" id="logoMain"></div><div class="logo-sub" id="logoSub"></div></div>
     <div class="sec">Dashboards</div>
     <div class="nav-item active" data-page="geral"><span class="ic">◱</span> Visão Geral</div>
-    <div class="nav-item" data-page="meta"><span class="ic">◨</span> Campanhas &amp; Otimização</div>
+    <div class="nav-item" data-page="meta"><span class="ic">◨</span> Meta Ads</div>
     <div class="foot">Somente leitura · atualiza ~30 min<br><span id="buildFoot"></span></div>
   </aside>
 
@@ -181,77 +185,68 @@
     <div class="page-content">
       <!-- ===================== PÁGINA 1: VISÃO GERAL ===================== -->
       <div class="page active" id="page-geral">
-        <div class="grid two-col">
-          <div>
-            <h2 class="sec-title">KPIs principais</h2>
-            <div class="kpis n1" id="geralKpis1"></div>
-            <h2 class="sec-title">KPIs secundários</h2>
-            <div class="kpis n2" id="geralKpis2"></div>
-          </div>
-          <div>
-            <h2 class="sec-title">Gráficos</h2>
-            <div class="card"><h3>Evolução diária</h3><p class="hint">Vendas e Checkouts (barras) · Gasto (linha vermelha) · Faturamento (linha verde) · CAC (linha preta)</p><div class="chart-box"><canvas id="gCombo"></canvas></div></div>
-            <div class="grid" style="grid-template-columns:1fr 1fr; margin-top:16px">
-              <div class="card"><h3>Gasto por campanha</h3><p class="hint">Top 8 no período</p><div class="chart-box chart-sm"><canvas id="gCamp"></canvas></div></div>
-              <div class="card"><h3>Faturamento por anúncio</h3><p class="hint">Top 10 · utm_content</p><div class="chart-box chart-sm"><canvas id="gFatAd"></canvas></div></div>
-            </div>
-            <div class="grid" style="grid-template-columns:1fr 1fr; margin-top:16px">
-              <div class="card"><h3>Vendas por produto</h3><p class="hint">Todos os produtos do funil</p><div class="chart-box chart-sm"><canvas id="gProd"></canvas></div></div>
-              <div class="card"><h3>Checkouts por anúncio</h3><p class="hint">Top 10 · utm_content</p><div class="chart-box chart-sm"><canvas id="gCkAd"></canvas></div></div>
-            </div>
-          </div>
+        <h2 class="sec-title">KPIs principais</h2>
+        <div class="kpis n1" id="geralKpis1"></div>
+        <h2 class="sec-title">KPIs secundários</h2>
+        <div class="kpis n2" id="geralKpis2"></div>
+
+        <h2 class="sec-title">Evolução diária &amp; resultados por dia</h2>
+        <div class="panel">
+          <div class="panel-chart"><h3>Evolução diária</h3><p class="hint">Vendas (barras) · Gasto (vermelha) · Faturamento (verde) · ROAS (linha preta, eixo próprio). Vendas/Faturamento = totais.</p><div class="chart-box"><canvas id="gCombo"></canvas></div></div>
+          <div class="tbl-wrap tbl-normal"><table class="dt" id="gDaily"></table></div>
+          <p class="note" style="padding:10px 15px 12px">Vendas e Faturamento = <b>totais</b> (todas as vendas). Conversões (CR, VisCHK, ConvCHK) consideram <b>apenas Meta Ads</b>. Heatmap por coluna · último dia no topo · clique numa data para filtrar (Ctrl = várias).</p>
         </div>
 
-        <h2 class="sec-title">Resultados gerais por dia</h2>
-        <div class="card" style="padding:0">
-          <div class="tbl-wrap tbl-normal"><table class="dt" id="gDaily"></table></div>
-          <p class="note" style="padding:10px 15px">Heatmap por coluna (verde=melhor, vermelho=pior) · último dia no topo. Métricas do funil VSL cruzando Meta Ads × Compradores. Clique numa data para filtrar a página (Ctrl = várias).</p>
+        <h2 class="sec-title">Indicadores por dia</h2>
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div class="card"><h3>CPM e CTR por dia</h3><p class="hint">CPM (R$, esq.) · CTR (%, dir.)</p><div class="chart-box chart-sm"><canvas id="gCpmCtr"></canvas></div></div>
+          <div class="card"><h3>Connect Rate e VisCHK por dia</h3><p class="hint">CR = Page Views/Cliques · VisCHK = Checkouts/Page Views</p><div class="chart-box chart-sm"><canvas id="gCrVis"></canvas></div></div>
+          <div class="card"><h3>ConvLP e ConvCHK por dia</h3><p class="hint">ConvLP = Vendas/Page Views · ConvCHK = Vendas/Checkouts (Meta Ads)</p><div class="chart-box chart-sm"><canvas id="gConv"></canvas></div></div>
+          <div class="card" style="padding:0"><div style="padding:14px 15px 4px"><h3>Vendas por produto</h3><p class="hint" style="margin:0">Protocolo Reset = 100% · demais como % desse total</p></div><div class="tbl-wrap" style="max-height:210px"><table class="dt" id="gProd"></table></div></div>
         </div>
       </div>
 
-      <!-- ===================== PÁGINA 2: CAMPANHAS & OTIMIZAÇÃO ===================== -->
+      <!-- ===================== PÁGINA 2: META ADS ===================== -->
       <div class="page" id="page-meta">
-        <div class="grid three-col">
-          <div>
-            <h2 class="sec-title">Funil de tráfego pago (VSL · Meta)</h2>
-            <div class="card"><div class="funnel" id="metaFunnel"></div>
-              <p class="note"><b>Vendas / CAC / ConvCHK / Ticket</b> consideram o produto principal (<span id="mainProdNote"></span>). <b>Faturamento / ROAS</b> consideram todos os produtos do funil (orderbumps e upsells inclusos).</p>
-            </div>
-          </div>
-          <div>
-            <h2 class="sec-title">Gráficos — Meta Ads</h2>
-            <div class="card"><h3>Combinação diária</h3><p class="hint">Vendas/Checkouts (barras) · Gasto (vermelha) · Faturamento (verde) · CAC (preta)</p><div class="chart-box"><canvas id="mCombo"></canvas></div></div>
-            <div class="card" style="margin-top:16px"><h3>Faturamento por anúncio (utm_content)</h3><p class="hint">Top 10 · escopo filtrado</p><div class="chart-box"><canvas id="mContent"></canvas></div></div>
-          </div>
+        <h2 class="sec-title">Funil de tráfego pago (VSL · Meta)</h2>
+        <div class="card"><div class="funnel" id="metaFunnel"></div>
+          <p class="note">Considera <b>apenas vendas atribuídas ao Meta Ads</b> (UTM Content = Ad Name). <b>Vendas/CAC/ConvCHK/Ticket</b> = produto principal (<span id="mainProdNote"></span>); <b>Faturamento/ROAS</b> = todos os produtos do funil (orderbumps/upsells).</p>
         </div>
 
-        <h2 class="sec-title">Resultados gerais por dia</h2>
-        <div class="card" style="padding:0">
+        <h2 class="sec-title">Combinação diária &amp; resultados por dia</h2>
+        <div class="panel">
+          <div class="panel-chart"><h3>Combinação diária</h3><p class="hint">Vendas (barras) · Gasto (vermelha) · Faturamento (verde) · ROAS (linha preta, eixo próprio) — só Meta Ads.</p><div class="chart-box"><canvas id="mCombo"></canvas></div></div>
           <div class="tbl-wrap tbl-normal"><table class="dt" id="tDaily"></table></div>
-          <p class="note" style="padding:10px 15px">Heatmap por coluna (verde=melhor, vermelho=pior). Último dia no topo. Clique numa data para filtrar a página (Ctrl = várias).</p>
+          <p class="note" style="padding:10px 15px 12px">Todos os valores consideram <b>apenas Meta Ads</b>. Heatmap por coluna · último dia no topo · clique numa data para filtrar (Ctrl = várias).</p>
         </div>
 
-        <h2 class="sec-title">Hierarquia · Campanha → Conjunto → Anúncio</h2>
+        <h2 class="sec-title">Faturamento por anúncio &amp; vendas por produto</h2>
+        <div class="grid" style="grid-template-columns:1fr 1fr">
+          <div class="card"><h3>Faturamento por anúncio</h3><p class="hint">Top 10 · utm_content · só Meta Ads</p><div class="chart-box chart-sm"><canvas id="mContent"></canvas></div></div>
+          <div class="card" style="padding:0"><div style="padding:14px 15px 4px"><h3>Vendas por produto</h3><p class="hint" style="margin:0">Protocolo Reset = 100% · só Meta Ads</p></div><div class="tbl-wrap" style="max-height:210px"><table class="dt" id="mProd"></table></div></div>
+        </div>
+
+        <h2 class="sec-title">Otimização · Campanha → Conjunto → Anúncio</h2>
         <div class="table-chart-pair">
           <div class="thead-title">Campanhas</div>
           <div class="tbl-wrap tbl-normal"><table class="dt" id="tCamp"></table></div>
-          <div class="pair-chart"><canvas id="chCamp"></canvas></div>
+          <div class="pair-chart"><div class="pc-title">CAC por campanha, por dia</div><canvas id="chCamp"></canvas></div>
         </div>
         <div class="table-chart-pair">
           <div class="thead-title">Conjuntos (Ad Sets)</div>
           <div class="tbl-wrap tbl-normal"><table class="dt" id="tAdset"></table></div>
-          <div class="pair-chart"><canvas id="chAdset"></canvas></div>
+          <div class="pair-chart"><div class="pc-title">CAC por campanha, por dia</div><canvas id="chAdset"></canvas></div>
         </div>
         <div class="table-chart-pair">
           <div class="thead-title">Anúncios</div>
           <div class="tbl-wrap tbl-double"><table class="dt" id="tAd"></table></div>
-          <div class="pair-chart"><canvas id="chAd"></canvas></div>
+          <div class="pair-chart"><div class="pc-title">CAC por campanha, por dia</div><canvas id="chAd"></canvas></div>
         </div>
 
         <h2 class="sec-title">Compradores <span class="pill q" id="qCount"></span></h2>
         <div class="card" style="padding:0">
           <div class="tbl-wrap" style="max-height:360px"><table class="dt" id="tQual"></table></div>
-          <p class="note" style="padding:10px 15px">E‑mail <b>mascarado</b> (página pública). A lista completa fica só na planilha. Inclui produto principal + orderbumps/upsells atribuídos ao tráfego.</p>
+          <p class="note" style="padding:10px 15px">E‑mail <b>mascarado</b> (página pública). Só vendas atribuídas ao Meta Ads (produto principal + orderbumps/upsells).</p>
         </div>
       </div>
 
@@ -267,6 +262,7 @@ const DATA = JSON.parse(document.getElementById('payload').textContent);
 const META = DATA.meta, SALES = DATA.sales, B = DATA.build;
 const TAX = B.tax_factor || 1;
 const MAIN_PRODUCT = B.main_product || 'Produto principal';
+const MAIN_PREFIX = 'protocolo reset hormonal';
 
 /* ---------------- format ---------------- */
 const nf0=new Intl.NumberFormat('pt-BR',{maximumFractionDigits:0});
@@ -279,6 +275,7 @@ const numf=v=>(v==null||!isFinite(v))?'-':nf1.format(v);
 const roasf=v=>(v==null||!isFinite(v))?'-':nf1.format(v)+'x';
 const dimf=v=>v==null?'-':String(v);
 const norm=s=>(s==null?'':String(s)).trim().toLowerCase();
+const isMainProd=p=>norm(p).startsWith(MAIN_PREFIX);
 const brdate=d=>{ if(!d) return '-'; const p=d.split('-'); return p[2]+'/'+p[1]+'/'+p[0]; };
 const WD=['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
 const weekday=d=>{ const dt=new Date(d+'T00:00:00'); return isNaN(dt)?'':WD[dt.getDay()]; };
@@ -307,36 +304,40 @@ function dateActive(d){
 const metaActive  = ()=> META.filter(m=>dateActive(m.d));
 const salesActive = ()=> SALES.filter(s=>dateActive(s.d));
 
-/* ---------------- aggregation ---------------- */
-/* bucket = {sp,im,cl,pv,ck,vendas,fat} */
+/* ---------------- aggregation ----------------
+   bucket = {sp,im,cl,pv,ck, vendas, vendasM, fat}
+   vendas  = compras do produto principal (base de exibição da página)
+   vendasM = compras do produto principal atribuídas ao Meta Ads (base das conversões)
+   fat     = faturamento (todos os produtos do escopo)
+   Obs.: na aba Meta o conjunto de vendas já é filtrado a meta==1, então vendas==vendasM. */
+function newBucket(){return {sp:0,im:0,cl:0,pv:0,ck:0,vendas:0,vendasM:0,fat:0};}
+function addSales(a,r){ a.vendas+=r.main; a.vendasM+=(r.main&&r.meta)?1:0; a.fat+=r.val; }
 function derive(a){
   const g=a.sp*taxf();
   return {gasto:g, impr:a.im, cliques:a.cl, pv:a.pv, ck:a.ck, vendas:a.vendas, fat:a.fat,
     cpm:a.im?g/a.im*1000:null, ctr:a.im?a.cl/a.im:null, cpc:a.cl?g/a.cl:null,
-    cpv:a.pv?g/a.pv:null, cr:a.pv?a.cl/a.pv:null,
+    cpv:a.pv?g/a.pv:null, cr:a.cl?a.pv/a.cl:null,               /* CR = Page Views / Cliques */
     cpic:a.ck?g/a.ck:null, vischk:a.pv?a.ck/a.pv:null,
-    cac:a.vendas?g/a.vendas:null, convchk:a.ck?a.vendas/a.ck:null,
-    roas:g?a.fat/g:null, ticket:a.vendas?a.fat/a.vendas:null};
+    convlp:a.pv?a.vendasM/a.pv:null,                            /* Vendas(Meta) / Page Views */
+    convchk:a.ck?a.vendasM/a.ck:null,                           /* Vendas(Meta) / Checkouts */
+    cac:a.vendas?g/a.vendas:null, roas:g?a.fat/g:null, ticket:a.vendas?a.fat/a.vendas:null};
 }
-function newBucket(){return {sp:0,im:0,cl:0,pv:0,ck:0,vendas:0,fat:0};}
 function buildAgg(fS,fM,dim){
-  const m={};
-  const get=k=>m[k]||(m[k]=newBucket());
+  const m={}; const get=k=>m[k]||(m[k]=newBucket());
   fM.forEach(r=>{const a=get(r[dim]); a.sp+=r.sp; a.im+=r.im; a.cl+=r.cl; a.pv+=r.pv; a.ck+=r.ck;});
-  fS.forEach(r=>{const a=get(r[dim]); a.vendas+=r.main; a.fat+=r.val;});
+  fS.forEach(r=>{const a=get(r[dim]); addSales(a,r);});
   return m;
 }
 function totals(fS,fM){
   const a=newBucket();
   fM.forEach(r=>{a.sp+=r.sp;a.im+=r.im;a.cl+=r.cl;a.pv+=r.pv;a.ck+=r.ck;});
-  fS.forEach(r=>{a.vendas+=r.main;a.fat+=r.val;});
+  fS.forEach(r=>addSales(a,r));
   return a;
 }
-/* daily aggregation */
 function daily(fS,fM){
   const days={}; const g=d=>days[d]||(days[d]=Object.assign({d},newBucket()));
   fM.forEach(r=>{if(!r.d)return; const a=g(r.d); a.sp+=r.sp; a.im+=r.im; a.cl+=r.cl; a.pv+=r.pv; a.ck+=r.ck;});
-  fS.forEach(r=>{if(!r.d)return; const a=g(r.d); a.vendas+=r.main; a.fat+=r.val;});
+  fS.forEach(r=>{if(!r.d)return; addSales(g(r.d),r);});
   return Object.values(days).sort((a,b)=>a.d<b.d?-1:1);
 }
 
@@ -345,8 +346,8 @@ function colWidth(cfg,c){ const saved=(STATE.colw[cfg.id]||{})[c.key];
   if(saved) return saved;
   if(c.w) return c.w;
   if(c.type==='date') return 96;
-  if(c.type==='dim') return c.big?360:150;
-  return 92; }
+  if(c.type==='dim') return c.big?300:150;
+  return 88; }
 function renderTable(cfg){
   const table=document.getElementById(cfg.id); if(!table) return;
   const sortState=STATE.sort[cfg.id];
@@ -370,7 +371,7 @@ function renderTable(cfg){
     const tds=cfg.cols.map(c=>{
       const v=r.cells[c.key]; let bg='';
       if(c.heat && ext[c.key]) bg=`background:${heat(v,ext[c.key][0],ext[c.key][1],c.heat==='lo')}`;
-      const cls=(c.type==='dim'?'dim':'')+(c.cls&&c.cls(r)?' '+c.cls(r):'');
+      const cls=(c.type==='dim'?'dim':'');
       return `<td class="${cls}" style="${bg}">${fmt(c.type,v)}</td>`;
     }).join('');
     return `<tr class="${sel?'sel':''}" data-k="${encodeURIComponent(r.k)}">${tds}</tr>`;
@@ -415,94 +416,131 @@ function heat(v,lo,hi,lower){
   const r=Math.round(bad[0]+(gd[0]-bad[0])*good), g=Math.round(bad[1]+(gd[1]-bad[1])*good), b=Math.round(bad[2]+(gd[2]-bad[2])*good);
   return `rgba(${r},${g},${b},${(0.10+0.34*Math.abs(good-0.5)*2).toFixed(2)})`;
 }
-function toggleSet(set,key,ctrl,others){
+function toggleSet(set,key,ctrl){
   if(ctrl){ set.has(key)?set.delete(key):set.add(key); }
   else { const only=set.has(key)&&set.size===1; set.clear(); if(!only) set.add(key); }
-  if(others) others.forEach(s=>s.clear());
 }
 
 /* ---------------- charts ---------------- */
 const charts={};
+const PALETTE=['#3B5BDB','#E34948','#1BAF7A','#E8A400','#8AA0F0','#9B59B6','#16A085','#E67E22'];
 const cvar=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 const cmuted=()=>cvar('--muted')||'#6B7280', cink=()=>cvar('--ink')||'#1A1D2E', cgrid=()=>cvar('--grid')||'#EEF0F5';
 function destroy(id){ if(charts[id]){ charts[id].destroy(); delete charts[id]; } }
+const FMT={brl:brl,pct:pct,num:numf,int:intf,roas:roasf};
+
+/* combo: Vendas (barras) · Gasto/Faturamento (R$) · ROAS (eixo próprio) */
 function comboChart(id, d){
   destroy(id); const el=document.getElementById(id); if(!el) return;
   const labels=d.map(x=>x.d.slice(5)), mut=cmuted(), gr=cgrid();
   charts[id]=new Chart(el,{
     data:{labels, datasets:[
       {type:'bar',label:'Vendas',data:d.map(x=>x.vendas),backgroundColor:'#3B5BDB',yAxisID:'y',borderRadius:3,order:3},
-      {type:'bar',label:'Checkouts',data:d.map(x=>x.ck),backgroundColor:'#8AA0F0',yAxisID:'y',borderRadius:3,order:3},
-      {type:'line',label:'Gasto',data:d.map(x=>+(x.sp*taxf()).toFixed(2)),borderColor:'#E34948',backgroundColor:'#E34948',yAxisID:'y1',borderWidth:2,pointRadius:2,tension:.25,order:1},
-      {type:'line',label:'Faturamento',data:d.map(x=>+x.fat.toFixed(2)),borderColor:'#1BAF7A',backgroundColor:'#1BAF7A',yAxisID:'y1',borderWidth:2,pointRadius:2,tension:.25,order:1},
-      {type:'line',label:'CAC',data:d.map(x=>x.vendas?+((x.sp*taxf())/x.vendas).toFixed(2):null),borderColor:cink(),backgroundColor:cink(),yAxisID:'y1',borderWidth:2,pointRadius:2,spanGaps:true,tension:.25,order:0},
+      {type:'line',label:'Gasto',data:d.map(x=>+(x.sp*taxf()).toFixed(2)),borderColor:'#E34948',backgroundColor:'#E34948',yAxisID:'y1',borderWidth:2,pointRadius:2,tension:.25,order:2},
+      {type:'line',label:'Faturamento',data:d.map(x=>+x.fat.toFixed(2)),borderColor:'#1BAF7A',backgroundColor:'#1BAF7A',yAxisID:'y1',borderWidth:2,pointRadius:2,tension:.25,order:2},
+      {type:'line',label:'ROAS',data:d.map(x=>{const g=x.sp*taxf();return g?+(x.fat/g).toFixed(2):null;}),borderColor:cink(),backgroundColor:cink(),yAxisID:'y2',borderWidth:2,pointRadius:2,spanGaps:true,tension:.25,order:0},
     ]},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
       plugins:{legend:{labels:{color:cink(),boxWidth:10,usePointStyle:true,font:{size:11}}},
-        tooltip:{callbacks:{label:c=>{const v=c.raw; return c.dataset.label+': '+(c.dataset.yAxisID==='y1'?brl(v):intf(v));}}}},
+        tooltip:{callbacks:{label:c=>{const v=c.raw,ax=c.dataset.yAxisID; return c.dataset.label+': '+(ax==='y1'?brl(v):ax==='y2'?roasf(v):intf(v));}}}},
       scales:{x:{ticks:{color:mut,font:{size:10}},grid:{display:false}},
-        y:{position:'left',ticks:{color:mut,font:{size:10}},grid:{color:gr},beginAtZero:true,title:{display:true,text:'Vendas / Checkouts',color:mut,font:{size:10}}},
-        y1:{position:'right',ticks:{color:mut,font:{size:10}},grid:{display:false},beginAtZero:true,title:{display:true,text:'R$',color:mut,font:{size:10}}}}}
+        y:{position:'left',ticks:{color:mut,font:{size:10}},grid:{color:gr},beginAtZero:true,title:{display:true,text:'Vendas',color:mut,font:{size:10}}},
+        y1:{position:'right',ticks:{color:mut,font:{size:10}},grid:{display:false},beginAtZero:true,title:{display:true,text:'R$',color:mut,font:{size:10}}},
+        y2:{position:'right',ticks:{color:mut,font:{size:10},callback:v=>numf(v)+'x'},grid:{display:false},beginAtZero:true,title:{display:true,text:'ROAS',color:mut,font:{size:10}}}}}
   });
 }
+/* linhas genéricas (1 ou 2 eixos) */
+function multiLine(id, d, series, opts){
+  destroy(id); const el=document.getElementById(id); if(!el) return;
+  const labels=d.map(x=>x.d.slice(5)), mut=cmuted();
+  const useR=series.some(s=>s.axis==='R');
+  const datasets=series.map(s=>({label:s.label,data:d.map(s.fn),borderColor:s.color,backgroundColor:s.color,
+    yAxisID:s.axis==='R'?'y1':'y',borderWidth:2,pointRadius:2,spanGaps:true,tension:.25,_fmt:FMT[s.fmt]||numf}));
+  const scales={x:{ticks:{color:mut,font:{size:9}},grid:{display:false}},
+    y:{position:'left',beginAtZero:true,ticks:{color:mut,font:{size:9},callback:v=>(FMT[opts.L.fmt]||numf)(v)},grid:{color:cgrid()}}};
+  if(useR) scales.y1={position:'right',beginAtZero:true,grid:{display:false},ticks:{color:mut,font:{size:9},callback:v=>(FMT[opts.R.fmt]||numf)(v)}};
+  charts[id]=new Chart(el,{type:'line',data:{labels,datasets},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:cink(),boxWidth:10,usePointStyle:true,font:{size:10}}},
+        tooltip:{callbacks:{label:c=>c.dataset.label+': '+(c.dataset._fmt||numf)(c.raw)}}},
+      scales}});
+}
+/* barras horizontais (faturamento por anúncio) */
 const barLabels={id:'barLabels',afterDatasetsDraw(ch){const{ctx}=ch;ctx.save();ctx.font='600 11px Segoe UI,system-ui';ctx.fillStyle=cmuted();ctx.textBaseline='middle';
-  const ds=ch.data.datasets[0], f=ds.fmt||intf;
+  const ds=ch.data.datasets[0], f=ds._fmt||intf;
   ch.getDatasetMeta(0).data.forEach((el,i)=>{const v=ds.data[i]; if(!v)return; ctx.fillText(f(v),el.x+5,el.y);});ctx.restore();}};
-function hbar(id, items, valFn, colorFn, top, fmtFn){
+function hbar(id, items, valFn, color, top, fmtFn){
   destroy(id); const el=document.getElementById(id); if(!el) return;
   let arr=items.slice().sort((a,b)=>valFn(b)-valFn(a)); if(top) arr=arr.slice(0,top);
   const mut=cmuted(), f=fmtFn||intf;
   charts[id]=new Chart(el,{type:'bar', plugins:[barLabels],
-    data:{labels:arr.map(x=>x.label), datasets:[{label:'v',data:arr.map(valFn),backgroundColor:arr.map(colorFn||(()=>'#3B5BDB')),borderRadius:3,fmt:f}]},
-    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:38}},
+    data:{labels:arr.map(x=>x.label), datasets:[{label:'v',data:arr.map(valFn),backgroundColor:color||'#1BAF7A',borderRadius:3,_fmt:f}]},
+    options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:44}},
       plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>f(c.raw)}}},
-      scales:{x:{beginAtZero:true,ticks:{color:mut,font:{size:10}},grid:{color:cgrid()}},
-              y:{ticks:{color:mut,font:{size:10}},grid:{display:false}}}}});
+      scales:{x:{beginAtZero:true,ticks:{color:mut,font:{size:9}},grid:{color:cgrid()}},
+              y:{ticks:{color:mut,font:{size:9}},grid:{display:false}}}}});
 }
-function lineChart(id, d){
+/* CAC por campanha, por dia (uma linha por campanha) */
+function campCacChart(id, fM, fS){
   destroy(id); const el=document.getElementById(id); if(!el) return;
-  const labels=d.map(x=>x.d.slice(5)), mut=cmuted();
-  charts[id]=new Chart(el,{type:'line',
-    data:{labels,datasets:[
-      {label:'Gasto',data:d.map(x=>+(x.sp*taxf()).toFixed(2)),borderColor:'#E34948',backgroundColor:'#E34948',borderWidth:2,pointRadius:2,spanGaps:true,tension:.25},
-      {label:'Faturamento',data:d.map(x=>+x.fat.toFixed(2)),borderColor:'#1BAF7A',backgroundColor:'#1BAF7A',borderWidth:2,pointRadius:2,spanGaps:true,tension:.25},
-    ]},
+  const spendTot={}; fM.forEach(r=>spendTot[r.camp]=(spendTot[r.camp]||0)+r.sp);
+  const camps=Object.keys(spendTot).sort((a,b)=>spendTot[b]-spendTot[a]).slice(0,6);
+  const dset=new Set(); fM.forEach(r=>r.d&&dset.add(r.d)); fS.forEach(r=>r.d&&dset.add(r.d));
+  const days=[...dset].sort();
+  const K=(c,dd)=>c+''+dd, sp={}, vd={};
+  fM.forEach(r=>{if(!r.d)return; sp[K(r.camp,r.d)]=(sp[K(r.camp,r.d)]||0)+r.sp;});
+  fS.forEach(r=>{if(!r.d)return; vd[K(r.camp,r.d)]=(vd[K(r.camp,r.d)]||0)+r.main;});
+  const ds=camps.map((c,i)=>({label:c.length>22?c.slice(0,22)+'…':c,
+    data:days.map(dd=>{const s=(sp[K(c,dd)]||0)*taxf(), v=vd[K(c,dd)]||0; return v?+(s/v).toFixed(2):null;}),
+    borderColor:PALETTE[i%PALETTE.length],backgroundColor:PALETTE[i%PALETTE.length],borderWidth:2,pointRadius:1.5,spanGaps:true,tension:.25}));
+  const mut=cmuted();
+  charts[id]=new Chart(el,{type:'line',data:{labels:days.map(x=>x.slice(5)),datasets:ds},
     options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
-      plugins:{legend:{labels:{color:cink(),boxWidth:10,usePointStyle:true,font:{size:10}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},
-      scales:{x:{ticks:{color:mut,font:{size:9}},grid:{display:false}},y:{ticks:{color:mut,font:{size:9}},grid:{color:cgrid()},beginAtZero:true}}}});
+      plugins:{legend:{labels:{color:cink(),boxWidth:8,font:{size:9}}},tooltip:{callbacks:{label:c=>c.dataset.label+': '+brl(c.raw)}}},
+      scales:{x:{ticks:{color:mut,font:{size:9}},grid:{display:false}},y:{ticks:{color:mut,font:{size:9},callback:v=>brl(v)},grid:{color:cgrid()},beginAtZero:true}}}});
 }
 
 /* ---------------- KPI cards ---------------- */
 function kpiCard(k){ return `<div class="kpi ${k.hero?'hero':''}"><div class="kl"><span>${k.label}</span>${k.pill?`<span class="pill q">${k.pill}</span>`:''}</div><div class="kv">${k.val}</div><div class="ka">${k.aux||''}</div></div>`; }
 
-/* ---------------- daily/hierarchy columns ---------------- */
-const DAILY_COLS=[
-  {key:'date',label:'Data',type:'date'},{key:'wd',label:'Dia',type:'dim',w:64},
-  {key:'gasto',label:'Gasto',type:'brl',heat:'hi'},{key:'cpm',label:'CPM',type:'brl',heat:'lo'},
-  {key:'ctr',label:'CTR',type:'pct',heat:'hi'},{key:'cpc',label:'CPC',type:'brl',heat:'lo'},
-  {key:'pv',label:'Page Views',type:'int',heat:'hi'},{key:'cpv',label:'CPV',type:'brl',heat:'lo'},
+/* ---------------- colunas das tabelas ---------------- */
+const METRIC_COLS=[
+  {key:'gasto',label:'Gasto',type:'brl',heat:'hi'},
+  {key:'cpm',label:'CPM',type:'brl',heat:'lo'},
+  {key:'ctr',label:'CTR',type:'pct',heat:'hi'},
   {key:'cr',label:'CR',type:'pct',heat:'hi'},
-  {key:'ck',label:'Checkouts',type:'int',heat:'hi'},{key:'cpic',label:'CPIC',type:'brl',heat:'lo'},
   {key:'vischk',label:'VisCHK',type:'pct',heat:'hi'},
-  {key:'vendas',label:'Vendas',type:'int',heat:'hi'},{key:'cac',label:'CAC',type:'brl',heat:'lo'},
   {key:'convchk',label:'ConvCHK',type:'pct',heat:'hi'},
-  {key:'fat',label:'Faturamento',type:'brl',heat:'hi'},{key:'roas',label:'ROAS',type:'roas',heat:'hi'},
+  {key:'vendas',label:'Vendas',type:'int',heat:'hi'},
+  {key:'cac',label:'CAC',type:'brl',heat:'lo'},
+  {key:'fat',label:'Faturamento',type:'brl',heat:'hi'},
   {key:'ticket',label:'Ticket',type:'brl',heat:'hi'},
+  {key:'roas',label:'ROAS',type:'roas',heat:'hi'},
 ];
+const DAILY_COLS=[{key:'date',label:'Data',type:'date'},{key:'wd',label:'Dia',type:'dim',w:64}].concat(METRIC_COLS);
+const HCOLS=[{key:'dim',label:'',type:'dim',big:true}].concat(METRIC_COLS.map(c=>{const o={...c}; delete o.heat; return o;}));
 function metricCells(x,d){
-  return {gasto:d.gasto, cpm:d.cpm, ctr:d.ctr, cpc:d.cpc, pv:x.pv, cpv:d.cpv, cr:d.cr,
-    ck:x.ck, cpic:d.cpic, vischk:d.vischk, vendas:x.vendas, cac:d.cac, convchk:d.convchk,
-    fat:x.fat, roas:d.roas, ticket:d.ticket};
+  return {gasto:d.gasto, cpm:d.cpm, ctr:d.ctr, cr:d.cr, vischk:d.vischk, convchk:d.convchk,
+    vendas:x.vendas, cac:d.cac, fat:x.fat, ticket:d.ticket, roas:d.roas};
 }
 function dailyCells(x,d,isTotal){
   return Object.assign({date:isTotal?null:x.d, wd:isTotal?'':weekday(x.d)}, metricCells(x,d));
 }
-/* colunas de hierarquia = dimensão + as mesmas métricas do funil */
-const HCOLS=[{key:'dim',label:'',type:'dim',big:true}].concat(DAILY_COLS.slice(2));
+
+/* ---------------- tabela Vendas por produto ---------------- */
+function renderProdTable(id, salesSet){
+  const mainCount=salesSet.reduce((s,r)=>s+r.main,0);
+  const byProd={}; salesSet.forEach(r=>{ if(isMainProd(r.prod)) return; byProd[r.prod]=(byProd[r.prod]||0)+1; });
+  const rows=[{k:'__main__', cells:{prod:MAIN_PRODUCT, vendas:mainCount, pctm:1}}];
+  Object.entries(byProd).sort((a,b)=>b[1]-a[1]).forEach(([prod,c])=>{
+    rows.push({k:prod, cells:{prod:prod, vendas:c, pctm:mainCount?c/mainCount:null}});
+  });
+  renderTable({id, cols:[{key:'prod',label:'Produto',type:'dim',big:true},{key:'vendas',label:'Vendas',type:'int',w:80},{key:'pctm',label:'% vs principal',type:'pct',w:120}], rows});
+}
 
 /* ---------------- PAGE 1: Visão Geral ---------------- */
 function renderGeral(){
-  const fM=metaActive(), fS=salesActive();
+  const fM=metaActive(), fS=salesActive();          // fS = todas as vendas do funil
   const t=totals(fS,fM), d=derive(t), g=d.gasto;
   const k1=[
     {label:'Gasto Total',val:brl(g),aux:'Meta Ads'},
@@ -520,28 +558,32 @@ function renderGeral(){
     {label:'CPM',val:brl(d.cpm),aux:'por mil impr.'},
     {label:'CPC',val:brl(d.cpc),aux:'Gasto / Cliques'},
     {label:'CTR',val:pct(d.ctr),aux:'Cliques / Impr.'},
-    {label:'CPV',val:brl(d.cpv),aux:'Gasto / Page Views'},
-    {label:'CR',val:pct(d.cr),aux:'Cliques / Page Views'},
-    {label:'CPIC',val:brl(d.cpic),aux:'Gasto / Checkouts'},
+    {label:'CR',val:pct(d.cr),aux:'Page Views / Cliques'},
     {label:'VisCHK',val:pct(d.vischk),aux:'Checkouts / Page Views'},
-    {label:'ConvCHK',val:pct(d.convchk),aux:'Vendas / Checkouts'},
+    {label:'ConvCHK',val:pct(d.convchk),aux:'Vendas / Checkouts (Meta)'},
+    {label:'CPV',val:brl(d.cpv),aux:'Gasto / Page Views'},
+    {label:'CPIC',val:brl(d.cpic),aux:'Gasto / Checkouts'},
   ];
   document.getElementById('geralKpis1').innerHTML=k1.map(kpiCard).join('');
   document.getElementById('geralKpis2').innerHTML=k2.map(kpiCard).join('');
-  comboChart('gCombo', daily(fS,fM));
-  // gasto por campanha
-  const aggC=buildAgg(fS,fM,'camp');
-  hbar('gCamp', Object.entries(aggC).map(([label,a])=>({label,v:a.sp*taxf()})), x=>x.v, ()=>'#E34948', 8, brl);
-  // faturamento por anuncio
-  const aggAd=buildAgg(fS,fM,'ad');
-  hbar('gFatAd', Object.entries(aggAd).map(([label,a])=>({label,v:a.fat})), x=>x.v, ()=>'#1BAF7A', 10, brl);
-  // vendas por produto (contagem de linhas do funil por produto)
-  const byProd={}; fS.forEach(s=>{byProd[s.prod]=(byProd[s.prod]||0)+1;});
-  hbar('gProd', Object.entries(byProd).map(([label,v])=>({label,v})), x=>x.v, ()=>'#3B5BDB', 12, intf);
-  // checkouts por anuncio
-  hbar('gCkAd', Object.entries(aggAd).map(([label,a])=>({label,v:a.ck})), x=>x.v, ()=>'#8AA0F0', 10, intf);
-  // tabela diaria
-  const dl=daily(fS,fM).slice().reverse();
+
+  const dd=daily(fS,fM);
+  comboChart('gCombo', dd);
+  multiLine('gCpmCtr', dd,
+    [{label:'CPM',fn:x=>x.im?+((x.sp*taxf())/x.im*1000).toFixed(2):null,color:'#E34948',fmt:'brl',axis:'L'},
+     {label:'CTR',fn:x=>x.im?+(x.cl/x.im).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'R'}],
+    {L:{fmt:'brl'},R:{fmt:'pct'}});
+  multiLine('gCrVis', dd,
+    [{label:'CR',fn:x=>x.cl?+(x.pv/x.cl).toFixed(4):null,color:'#3B5BDB',fmt:'pct',axis:'L'},
+     {label:'VisCHK',fn:x=>x.pv?+(x.ck/x.pv).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}],
+    {L:{fmt:'pct'}});
+  multiLine('gConv', dd,
+    [{label:'ConvLP',fn:x=>x.pv?+(x.vendasM/x.pv).toFixed(4):null,color:'#E8A400',fmt:'pct',axis:'L'},
+     {label:'ConvCHK',fn:x=>x.ck?+(x.vendasM/x.ck).toFixed(4):null,color:'#1BAF7A',fmt:'pct',axis:'L'}],
+    {L:{fmt:'pct'}});
+  renderProdTable('gProd', fS);
+
+  const dl=dd.slice().reverse();
   renderTable({id:'gDaily', cols:DAILY_COLS,
     rows:dl.map(x=>{const dv=derive(x); return {k:x.d, cells:dailyCells(x,dv)};}),
     total:dailyCells(t,d,true),
@@ -550,8 +592,8 @@ function renderGeral(){
   });
 }
 
-/* ---------------- PAGE 2: Campanhas & Otimização ---------------- */
-function metaScope(ex){ let fM=metaActive(), fS=salesActive();
+/* ---------------- PAGE 2: Meta Ads ---------------- */
+function metaScope(ex){ let fM=metaActive(), fS=salesActive().filter(s=>s.meta);   // só Meta Ads
   if(ex!=='C'&&STATE.mSelC.size){ fM=fM.filter(r=>STATE.mSelC.has(r.camp)); fS=fS.filter(r=>STATE.mSelC.has(r.camp)); }
   if(ex!=='A'&&STATE.mSelA.size){ fM=fM.filter(r=>STATE.mSelA.has(r.adset)); fS=fS.filter(r=>STATE.mSelA.has(r.adset)); }
   if(ex!=='D'&&STATE.mSelAd.size){ fM=fM.filter(r=>STATE.mSelAd.has(r.ad)); fS=fS.filter(r=>STATE.mSelAd.has(r.ad)); }
@@ -568,22 +610,24 @@ function renderMeta(){
   const t=totals(fS,fM), d=derive(t), g=d.gasto;
   const steps=[
     ['Gasto Total', brl(g), []],
-    ['Impressões', intf(t.im), [['CPM',brl(d.cpm)],['CTR',pct(d.ctr)]]],
-    ['Cliques', intf(t.cl), [['CPC',brl(d.cpc)],['CR',pct(d.cr)]]],
-    ['Page Views', intf(t.pv), [['CPV',brl(d.cpv)]]],
+    ['Impressões', intf(t.im), [['CPM',brl(d.cpm)]]],
+    ['Cliques', intf(t.cl), [['CPC',brl(d.cpc)],['CTR',pct(d.ctr)]]],
+    ['Page Views', intf(t.pv), [['CPV',brl(d.cpv)],['CR',pct(d.cr)]]],
     ['Checkouts', intf(t.ck), [['CPIC',brl(d.cpic)],['VisCHK',pct(d.vischk)]]],
     ['Vendas', intf(t.vendas), [['CAC',brl(d.cac)],['ConvCHK',pct(d.convchk)]]],
-    ['Faturamento', brl(t.fat), [['ROAS',roasf(d.roas)],['Ticket',brl(d.ticket)]]],
+    ['Faturamento', brl(t.fat), [['ROAS',roasf(d.roas)],['Ticket Médio',brl(d.ticket)]]],
   ];
   document.getElementById('metaFunnel').innerHTML=steps.map(s=>`
     <div class="step"><div><div class="m-label">${s[0]}</div><div class="m-val">${s[1]}</div></div>
     <div class="secs">${s[2].map(x=>`<div><span class="s-label">${x[0]}</span><span class="s-val">${x[1]}</span></div>`).join('')}</div></div>`).join('');
 
-  comboChart('mCombo', daily(fS,fM));
+  const dd=daily(fS,fM);
+  comboChart('mCombo', dd);
   const aggAd=buildAgg(fS,fM,'ad');
-  hbar('mContent', Object.entries(aggAd).map(([label,a])=>({label,v:a.fat})), x=>x.v, ()=>'#1BAF7A', 10, brl);
+  hbar('mContent', Object.entries(aggAd).map(([label,a])=>({label,v:a.fat})), x=>x.v, '#1BAF7A', 10, brl);
+  renderProdTable('mProd', fS);
 
-  const dl=daily(fS,fM).slice().reverse();
+  const dl=dd.slice().reverse();
   renderTable({id:'tDaily', cols:DAILY_COLS,
     rows:dl.map(x=>{const dv=derive(x); return {k:x.d, cells:dailyCells(x,dv)};}),
     total:dailyCells(t,d,true),
@@ -602,18 +646,15 @@ function renderMeta(){
   renderTable({id:'tAd', cols:HCOLS.map((c,i)=>i===0?{...c,label:'Anúncio'}:c), rows:hierRows(buildAgg(Sd.fS,Sd.fM,'ad')), total:totRowOf(totals(Sd.fS,Sd.fM)),
     selectable:true, selSet:STATE.mSelAd, onSelect:(k,e)=>selDim('D',k,e&&(e.ctrlKey||e.metaKey))});
 
-  const dch=daily(fS,fM);
-  lineChart('chCamp',dch); lineChart('chAdset',dch); lineChart('chAd',dch);
+  campCacChart('chCamp', fM, fS); campCacChart('chAdset', fM, fS); campCacChart('chAd', fM, fS);
 
-  // compradores
   const vendas=fS.reduce((s,r)=>s+r.main,0);
   document.getElementById('qCount').textContent=vendas+' vendas · '+fS.length+' linhas';
   const rows=fS.slice().sort((a,b)=>(a.d<b.d?1:-1));
   renderTable({id:'tQual',
     cols:[{key:'d',label:'Data',type:'date'},{key:'nm',label:'Nome',type:'dim'},{key:'prod',label:'Produto',type:'dim',big:true},
       {key:'val',label:'Valor',type:'brl',w:110},{key:'camp',label:'Campanha',type:'dim',big:true},{key:'ad',label:'Anúncio',type:'dim',big:true},{key:'em',label:'E‑mail',type:'dim',w:200}],
-    rows:rows.map((s,i)=>({k:'s'+i, cells:{d:s.d,nm:s.nm,prod:s.prod,val:s.val,camp:s.camp,ad:s.ad,em:s.em},
-      cls:()=>s.main?'':''}))});
+    rows:rows.map((s,i)=>({k:'s'+i, cells:{d:s.d,nm:s.nm,prod:s.prod,val:s.val,camp:s.camp,ad:s.ad,em:s.em}}))});
 }
 
 /* ---------------- date presets ---------------- */
@@ -641,7 +682,7 @@ function setPage(p){ STATE.page=p;
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.toggle('active',n.dataset.page===p));
   document.getElementById('page-geral').classList.toggle('active',p==='geral');
   document.getElementById('page-meta').classList.toggle('active',p==='meta');
-  document.getElementById('ptitle').textContent = p==='meta'?'Campanhas & Otimização':'Visão Geral';
+  document.getElementById('ptitle').textContent = p==='meta'?'Meta Ads':'Visão Geral';
   document.getElementById('navToggle').checked=false;
   history.replaceState(null,'', p==='meta'?'#meta':'#geral');
   renderAll();

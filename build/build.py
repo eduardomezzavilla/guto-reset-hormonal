@@ -263,6 +263,9 @@ def process(meta_rows, sales_rows):
             "prod": prod or "—",
             "val": round(to_float(cell(row, sidx["val"])), 2),
             "main": 1 if main else 0,
+            # meta=1 quando a venda casa com um Ad Name real do Meta (tráfego pago).
+            # Vendas do produto principal sem UTM de anúncio (orgânico/direto) têm meta=0.
+            "meta": 1 if an in ad_map else 0,
             "nm": first_last_initial(cell(row, sidx["name"])),
             "em": mask_email(cell(row, sidx["email"])),
         })
