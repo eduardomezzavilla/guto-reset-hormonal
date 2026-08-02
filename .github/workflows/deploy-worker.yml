@@ -21,10 +21,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Deploy Worker via Wrangler
+      - name: Deploy Worker via Wrangler (e reaplica os secrets a cada deploy)
         uses: cloudflare/wrangler-action@v3
         with:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           workingDirectory: ia-worker
           command: deploy
+          secrets: |
+            ANTHROPIC_API_KEY
+            INSIGHTS_PASSWORD
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          INSIGHTS_PASSWORD: ${{ secrets.INSIGHTS_PASSWORD }}
