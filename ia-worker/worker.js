@@ -52,7 +52,7 @@ Compare estruturas contra a MÉDIA da própria conta (não use benchmarks fixos)
 
 Responda SOMENTE com um objeto JSON válido (sem markdown, sem texto fora do JSON), no formato:
 {"insights":[{"nivel":"funil|campanha|conjunto|anuncio","metrica":"nome da métrica","severidade":"alta|media|baixa","titulo":"resumo curto","diagnostico":"o que os dados mostram","recomendacao":"ação concreta a executar","estrutura":"nome da campanha/conjunto/anúncio (ou vazio)","verba":{"acao":"aumentar|reduzir|manter","percentual":20,"nivel_ajuste":"conjunto|campanha","observacao":"ABO/CBO e mín-máx se aplicável"}}]}
-O campo "verba" só deve existir quando houver recomendação de mudança de orçamento; caso contrário, omita-o. Gere de 4 a 10 insights, dos mais relevantes aos menos.`;
+O campo "verba" só deve existir quando houver recomendação de mudança de orçamento; caso contrário, omita-o. Gere de 4 a 8 insights, dos mais relevantes aos menos. Seja direto: "diagnostico" e "recomendacao" em 1-2 frases cada, sem repetir números já citados em outros campos.`;
 
 const CORS = {
   "Access-Control-Allow-Origin": "*",
@@ -118,7 +118,7 @@ export default {
         },
         body: JSON.stringify({
           model: MODEL,
-          max_tokens: 8000,
+          max_tokens: 16000,
           system: SYSTEM_PROMPT,
           messages: [{ role: "user", content: userMsg }],
         }),
