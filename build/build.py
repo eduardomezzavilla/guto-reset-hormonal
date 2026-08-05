@@ -194,7 +194,9 @@ def process(meta_rows, sales_rows):
     )
 
     meta = []
-    ad_map = {}   # norm(ad_name) -> (campaign, adset) para atribuir as vendas
+    ad_names = set()   # nomes de anúncio REAIS do Meta -> marca a venda como tráfego pago
+    ad_fallback = {}   # norm(ad_name) -> (camp, adset) do 1º Meta; só usado se a venda
+                       # não trouxer utm_campaign/utm_medium próprios (raro)
     for row in meta_rows[1:]:
         if not any((c or "").strip() for c in row):
             continue
@@ -204,12 +206,13 @@ def process(meta_rows, sales_rows):
         adset = cell(row, midx["adset"]) or "(sem conjunto)"
         ad_raw = cell(row, midx["ad"])
         ad = ad_raw or "(sem anúncio)"
-        # Índice de atribuição só com nomes de anúncio REAIS. Se usássemos o
-        # rótulo "(sem anúncio)", a primeira linha do Meta sem Ad Name capturaria
-        # essa chave e toda venda sem UTM Content cairia nessa campanha.
+        # Só nomes de anúncio REAIS entram no índice. O rótulo "(sem anúncio)" (Ad Name
+        # vazio) nunca é indexado, senão a 1ª linha do Meta sem Ad Name capturaria a
+        # chave e toda venda sem UTM Content cairia nessa campanha.
         an = norm(ad_raw)
-        if an and an not in ad_map:
-            ad_map[an] = (camp, adset)
+        if an:
+            ad_names.add(an)
+            ad_fallback.setdefault(an, (camp, adset))
         meta.append({
             "d": parse_date(cell(row, midx["day"])),
             "camp": camp, "adset": adset, "ad": ad,
@@ -251,20 +254,29 @@ def process(meta_rows, sales_rows):
         ad_raw = cell(row, sidx["utm_content"])
         ad = ad_raw or "(sem anúncio)"
         # Só casa com o Meta quando há UTM Content real. UTM Content vazio -> an=""
-        # (nunca está no ad_map), então a venda não é atribuída a nenhum anúncio.
+        # (nunca está em ad_names), então a venda não é marcada como tráfego pago.
         an = norm(ad_raw)
-        matched = an in ad_map   # an vazio jamais entra no ad_map (guardado acima)
+        matched = an in ad_names   # an vazio jamais entra em ad_names (guardado acima)
         main = is_main_product(prod)
         # Atribuição ao tráfego rastreado: produto principal OU anúncio que existe
         # no Meta (captura orderbumps/upsells que carregam a UTM do anúncio).
         attributed = main or matched
         if not attributed:
             continue
-        if matched:
-            camp, adset = ad_map[an]
-        else:
-            camp = cell(row, sidx["utm_campaign"]) or "(sem campanha)"
-            adset = cell(row, sidx["utm_medium"]) or "(sem conjunto)"
+        # Campanha/Conjunto vêm da PRÓPRIA UTM da venda (convenção do funil:
+        # Campaign Name = utm_campaign, Ad Set Name = utm_medium). O mesmo criativo
+        # (Ad Name = utm_content) é reutilizado em várias campanhas, então NÃO se pode
+        # inferir a campanha só pelo nome do anúncio — isso jogava todas as vendas de
+        # um criativo na 1ª campanha que o usou. Só se a venda não trouxer utm_campaign
+        # recorremos ao fallback pelo nome do anúncio (melhor esforço).
+        camp = cell(row, sidx["utm_campaign"])
+        adset = cell(row, sidx["utm_medium"])
+        if matched and (not camp or not adset):
+            fc, fa = ad_fallback.get(an, ("", ""))
+            camp = camp or fc
+            adset = adset or fa
+        camp = camp or "(sem campanha)"
+        adset = adset or "(sem conjunto)"
         sales.append({
             "d": parse_date(cell(row, sidx["created"])),
             "camp": camp, "adset": adset, "ad": ad,
