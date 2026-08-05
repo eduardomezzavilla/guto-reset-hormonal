@@ -202,8 +202,12 @@ def process(meta_rows, sales_rows):
             continue
         camp = cell(row, midx["campaign"]) or "(sem campanha)"
         adset = cell(row, midx["adset"]) or "(sem conjunto)"
-        ad = cell(row, midx["ad"]) or "(sem anúncio)"
-        an = norm(ad)
+        ad_raw = cell(row, midx["ad"])
+        ad = ad_raw or "(sem anúncio)"
+        # Índice de atribuição só com nomes de anúncio REAIS. Se usássemos o
+        # rótulo "(sem anúncio)", a primeira linha do Meta sem Ad Name capturaria
+        # essa chave e toda venda sem UTM Content cairia nessa campanha.
+        an = norm(ad_raw)
         if an and an not in ad_map:
             ad_map[an] = (camp, adset)
         meta.append({
@@ -244,15 +248,19 @@ def process(meta_rows, sales_rows):
         if not is_paid(cell(row, sidx["status"])):
             continue
         prod = cell(row, sidx["prod"])
-        ad = cell(row, sidx["utm_content"]) or "(sem anúncio)"
-        an = norm(ad)
+        ad_raw = cell(row, sidx["utm_content"])
+        ad = ad_raw or "(sem anúncio)"
+        # Só casa com o Meta quando há UTM Content real. UTM Content vazio -> an=""
+        # (nunca está no ad_map), então a venda não é atribuída a nenhum anúncio.
+        an = norm(ad_raw)
+        matched = an in ad_map   # an vazio jamais entra no ad_map (guardado acima)
         main = is_main_product(prod)
         # Atribuição ao tráfego rastreado: produto principal OU anúncio que existe
         # no Meta (captura orderbumps/upsells que carregam a UTM do anúncio).
-        attributed = main or (an in ad_map)
+        attributed = main or matched
         if not attributed:
             continue
-        if an in ad_map:
+        if matched:
             camp, adset = ad_map[an]
         else:
             camp = cell(row, sidx["utm_campaign"]) or "(sem campanha)"
@@ -265,7 +273,7 @@ def process(meta_rows, sales_rows):
             "main": 1 if main else 0,
             # meta=1 quando a venda casa com um Ad Name real do Meta (tráfego pago).
             # Vendas do produto principal sem UTM de anúncio (orgânico/direto) têm meta=0.
-            "meta": 1 if an in ad_map else 0,
+            "meta": 1 if matched else 0,
             "nm": first_last_initial(cell(row, sidx["name"])),
             "em": mask_email(cell(row, sidx["email"])),
         })
